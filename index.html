@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Split">
+<meta name="theme-color" id="tc" content="#07090E">
+<meta name="color-scheme" content="light dark">
+<title>Split · Utilities</title>
+<script>
+// set theme before paint to avoid a flash
+(function(){try{
+  var s=JSON.parse(localStorage.getItem("split_utils_v1")||"{}");
+  var t=(s.meta&&s.meta.theme)||"auto";
+  var dark = t==="dark" || (t==="auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.dataset.theme = dark?"dark":"light";
+  var tc=document.getElementById("tc"); if(tc) tc.content = dark?"#07090E":"#EAEEF5";
+}catch(e){document.documentElement.dataset.theme="dark";}})();
+</script>
+<style>
+  /* ===== Theme tokens ===== */
+  html[data-theme="dark"]{
+    --bg:#07090E; --text:#F1F5FB; --text2:rgba(233,240,250,.62); --text3:rgba(233,240,250,.40);
+    --glass:rgba(24,30,44,.55); --glass2:rgba(32,40,57,.72); --glassMenu:rgba(28,35,50,.7);
+    --stroke:rgba(255,255,255,.10); --strokeTop:rgba(255,255,255,.20); --sep:rgba(255,255,255,.09);
+    --fill:rgba(255,255,255,.07); --shadow:0 12px 34px rgba(0,0,0,.5);
+    --gold:#F0C14B; --elec:#F6A860; --net:#4FD0BC; --ins:#A79BFF; --danger:#FF7A66; --ok:#4FD0BC;
+    --blob1:rgba(240,193,75,.22); --blob2:rgba(79,208,188,.20); --blob3:rgba(167,155,255,.24);
+    --ctaText:#1c1608;
+  }
+  html[data-theme="light"]{
+    --bg:#E7ECF3; --text:#0C1220; --text2:rgba(18,26,42,.60); --text3:rgba(18,26,42,.42);
+    --glass:rgba(255,255,255,.55); --glass2:rgba(255,255,255,.75); --glassMenu:rgba(255,255,255,.68);
+    --stroke:rgba(255,255,255,.7); --strokeTop:rgba(255,255,255,.95); --sep:rgba(12,20,40,.10);
+    --fill:rgba(12,20,40,.05); --shadow:0 12px 30px rgba(40,52,84,.16);
+    --gold:#B67C10; --elec:#D97A24; --net:#0E9384; --ins:#6B5CE0; --danger:#DC5238; --ok:#0E9384;
+    --blob1:rgba(245,196,86,.55); --blob2:rgba(72,205,186,.5); --blob3:rgba(150,138,255,.48);
+    --ctaText:#231a05;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  #ambient{position:fixed;inset:0;z-index:-1;background:
+      radial-gradient(46% 38% at 12% 4%, var(--blob1), transparent 70%),
+      radial-gradient(52% 44% at 94% 16%, var(--blob2), transparent 70%),
+      radial-gradient(62% 52% at 50% 104%, var(--blob3), transparent 74%),
+      var(--bg);}
+  body{
+    background:transparent; color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; letter-spacing:-0.01em;
+    padding: env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+    max-width:520px; margin:0 auto; min-height:100vh; transition:color .3s;
+  }
+  .tnum{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+
+  /* Glass material */
+  .glass{background:var(--glass); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    backdrop-filter:blur(22px) saturate(180%); border:1px solid var(--stroke);
+    box-shadow:var(--shadow), inset 0 1px 0 var(--strokeTop);}
+
+  /* Header */
+  header{display:flex; align-items:center; justify-content:space-between; padding:16px 4px 12px;}
+  .brand{display:flex; align-items:baseline; gap:9px;}
+  .brand h1{font-size:26px; font-weight:800; letter-spacing:-0.03em; margin:0;}
+  .brand .cyc{font-size:12.5px; color:var(--text2); font-weight:600;}
+  .hbtns{display:flex; gap:9px;}
+  .icobtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--text);font-size:16px;
+    background:var(--glass); -webkit-backdrop-filter:blur(14px) saturate(160%); backdrop-filter:blur(14px) saturate(160%);
+    border:1px solid var(--stroke); box-shadow:inset 0 1px 0 var(--strokeTop);}
+  .icobtn:active{transform:scale(.92);}
+
+  /* Backup strip */
+  .bkstrip{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border-radius:16px;padding:12px 15px;margin:2px 0 4px;}
+  .bkstrip:active{transform:scale(.99);}
+  .bkdot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--text3);}
+  .bkdot.ok{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 20%,transparent);}
+  .bkdot.warn{background:var(--elec);box-shadow:0 0 0 4px color-mix(in srgb,var(--elec) 20%,transparent);}
+  .bkdot.bad{background:var(--danger);box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 22%,transparent);}
+  .bktext{flex:1;font-size:13.5px;font-weight:600;color:var(--text2);min-width:0;}
+  .bktext b{color:var(--text);font-weight:700;}
+  .bkcta{font-size:13px;font-weight:800;color:var(--gold);flex:none;}
+  .bkcta.hide{display:none;}
+
+  /* Hero */
+  .hero{border-radius:28px; padding:24px 22px 20px; position:relative; overflow:hidden; margin-top:2px;}
+  .hero::after{content:"";position:absolute;top:-45%;right:-15%;width:62%;height:130%;
+    background:radial-gradient(circle,color-mix(in srgb,var(--gold) 26%,transparent),transparent 66%);pointer-events:none;}
+  .eyebrow{display:flex;align-items:center;gap:9px;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--gold);}
+  .eyebrow .who{color:var(--text2);letter-spacing:0;text-transform:none;font-weight:600;font-size:13px;}
+  .eyebrow .who u{text-decoration:none;border-bottom:1px dashed var(--text3);padding-bottom:1px;}
+  .bignum{font-size:clamp(54px,17.5vw,78px);font-weight:800;letter-spacing:-0.04em;line-height:.96;margin:12px 0 5px;color:var(--text);}
+  .sub{color:var(--text2);font-size:14px;font-weight:500;}
+  .sub b{color:var(--text);font-weight:700;}
+  .pending{display:inline-block;margin-top:11px;font-size:12px;font-weight:700;color:var(--elec);
+    background:color-mix(in srgb,var(--elec) 14%,transparent);border:1px solid color-mix(in srgb,var(--elec) 30%,transparent);
+    padding:5px 11px;border-radius:999px;}
+  .compbar{display:flex;height:9px;border-radius:6px;overflow:hidden;margin:18px 0 12px;background:var(--fill);}
+  .compbar span{display:block;height:100%;transition:width .5s cubic-bezier(.2,.7,.2,1);}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;}
+  .legend .li{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);font-weight:600;}
+  .dot{width:9px;height:9px;border-radius:3px;flex:none;}
+
+  /* Sections + iOS grouped lists */
+  .sec{margin-top:24px;}
+  .sec-h{font-size:13px;font-weight:600;color:var(--text2);margin:0 6px 9px;}
+  .group{border-radius:20px; overflow:hidden;}
+  .group > *{position:relative;}
+  .group > *:not(:last-child)::after{content:"";position:absolute;left:16px;right:0;bottom:0;height:1px;background:var(--sep);}
+  .group.icons > *:not(:last-child)::after{left:64px;}
+
+  /* Rows */
+  .row{display:flex;align-items:center;gap:14px;padding:14px 16px;}
+  .tile{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;font-size:17px;}
+  .row .info{flex:1;min-width:0;}
+  .row .name{font-size:17px;font-weight:600;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px;}
+  .badge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;
+    background:color-mix(in srgb,var(--net) 16%,transparent);color:var(--net);border:1px solid color-mix(in srgb,var(--net) 28%,transparent);}
+  .row .meta{font-size:13px;color:var(--text2);font-weight:500;margin-top:3px;}
+  .row .meta .tap{color:var(--text);border-bottom:1px dashed var(--text3);}
+  .amt{font-size:19px;font-weight:700;letter-spacing:-0.02em;padding:6px 2px 6px 10px;border-radius:10px;flex:none;display:flex;align-items:center;gap:5px;}
+  .amt:active{background:var(--fill);}
+  .amt .pen{font-size:11px;color:var(--text3);}
+  .amt.empty{color:var(--text3);font-weight:600;}
+
+  /* Primary action */
+  .cta{width:100%;margin-top:12px;background:var(--gold);color:var(--ctaText);font-weight:800;font-size:16px;
+    padding:16px;border-radius:16px;box-shadow:0 8px 22px color-mix(in srgb,var(--gold) 30%,transparent), inset 0 1px 0 rgba(255,255,255,.3);}
+  .cta:active{transform:translateY(1px) scale(.995);filter:brightness(.98);}
+  .cta:disabled{background:var(--fill);color:var(--text3);box-shadow:none;}
+
+  /* Reminders (grouped) */
+  .rem{display:flex;align-items:center;gap:13px;padding:13px 15px;}
+  .rem .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex:none;background:var(--fill);}
+  .rem .rt{flex:1;min-width:0;}
+  .rem .r1{font-size:15px;font-weight:600;}
+  .rem .r2{font-size:12.5px;color:var(--text2);margin-top:2px;font-weight:500;}
+  .rem .when{font-size:12.5px;font-weight:700;flex:none;text-align:right;}
+  .when.soon{color:var(--elec);} .when.now{color:var(--danger);} .when.later{color:var(--text2);}
+
+  /* History (grouped) */
+  .hitem{display:flex;align-items:center;gap:12px;padding:14px 16px;}
+  .hitem .hd{flex:1;}
+  .hitem .hdate{font-size:15px;font-weight:600;}
+  .hitem .hbreak{font-size:12px;color:var(--text2);margin-top:2px;font-weight:500;}
+  .hitem .hcharge{text-align:right;}
+  .hitem .hcharge .c{font-size:16px;font-weight:800;color:var(--gold);}
+  .hitem .hcharge .t{font-size:11.5px;color:var(--text3);font-weight:600;margin-top:1px;}
+  .hitem .del{color:var(--text3);font-size:15px;padding:6px;margin:-6px;}
+  .empty-state{padding:26px 18px;text-align:center;color:var(--text2);font-size:13.5px;line-height:1.5;font-weight:500;}
+
+  /* Install hint */
+  .install{border-radius:16px;padding:13px 15px;font-size:13px;color:var(--text2);margin-top:16px;line-height:1.5;font-weight:500;display:none;}
+  .install b{color:var(--text);font-weight:700;}
+  .install .x{float:right;color:var(--text3);font-size:16px;padding:0 4px;}
+
+  /* Segmented control */
+  .seg{position:relative;display:flex;background:var(--fill);border-radius:12px;padding:3px;}
+  .seg button{flex:1;position:relative;z-index:1;border-radius:9px;padding:9px 0;font-size:14px;font-weight:600;color:var(--text2);transition:color .25s;}
+  .seg button.sel{color:var(--text);}
+  .seg .thumb{position:absolute;top:3px;bottom:3px;left:3px;border-radius:9px;background:var(--glass2);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--stroke);
+    box-shadow:0 2px 6px rgba(0,0,0,.18), inset 0 1px 0 var(--strokeTop);transition:transform .3s cubic-bezier(.3,.9,.3,1);}
+
+  /* Modals / sheets */
+  .scrim{position:fixed;inset:0;background:rgba(4,7,12,.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0 10px calc(10px + env(safe-area-inset-bottom));}
+  .scrim.on{display:flex;}
+  .sheet{width:100%;max-width:500px;border-radius:26px;padding:20px;
+    background:var(--glass2); -webkit-backdrop-filter:blur(30px) saturate(180%); backdrop-filter:blur(30px) saturate(180%);
+    border:1px solid var(--stroke); box-shadow:0 -8px 40px rgba(0,0,0,.35), inset 0 1px 0 var(--strokeTop);
+    animation:pop .26s cubic-bezier(.2,.9,.2,1);}
+  @keyframes pop{from{transform:translateY(16px);opacity:.5;}to{transform:none;opacity:1;}}
+  .sheet h3{margin:0 0 4px;font-size:18px;font-weight:800;letter-spacing:-0.02em;}
+  .sheet p{margin:0 0 15px;font-size:13px;color:var(--text2);font-weight:500;line-height:1.5;}
+  .sheet ol{margin:0 0 16px;padding-left:20px;color:var(--text2);font-size:13.5px;line-height:1.6;font-weight:500;}
+  .sheet ol b{color:var(--text);font-weight:700;}
+  .sheet .one{width:100%;padding:15px;border-radius:15px;font-size:15px;font-weight:800;background:var(--gold);color:var(--ctaText);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+  .field{display:flex;align-items:center;background:var(--fill);border:1.5px solid var(--stroke);border-radius:14px;padding:0 14px;margin-bottom:14px;}
+  .field .pfx{font-size:20px;font-weight:700;color:var(--text2);}
+  .field input{flex:1;background:none;border:none;color:var(--text);font-size:22px;font-weight:700;padding:15px 8px;outline:none;font-family:inherit;min-width:0;}
+  .field input[type=date]{font-size:17px;font-weight:600;}
+  .sheet-btns{display:flex;gap:10px;}
+  .sheet-btns button{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;}
+  .btn-cancel{background:var(--fill);color:var(--text);}
+  .btn-save{background:var(--gold);color:var(--ctaText);box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+  .btn-save:active,.btn-cancel:active{filter:brightness(.95);}
+
+  /* Settings sheet rows */
+  .set-label{font-size:13px;font-weight:600;color:var(--text2);margin:16px 4px 8px;}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--fill);
+    border-radius:14px;padding:14px 15px;margin-bottom:9px;font-size:15px;font-weight:600;}
+  .set-row:active{filter:brightness(.97);}
+  .set-row .chev{color:var(--text3);font-size:15px;}
+  .set-row.danger{color:var(--danger);}
+
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:var(--glass2); -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%);
+    color:var(--text);border:1px solid var(--stroke);box-shadow:var(--shadow);
+    font-size:13.5px;font-weight:700;padding:12px 18px;border-radius:14px;opacity:0;transition:.28s;z-index:60;pointer-events:none;max-width:88vw;text-align:center;}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .foot{text-align:center;color:var(--text3);font-size:11px;margin-top:22px;font-weight:500;}
+  /* Balance card */
+  .balance{display:flex;align-items:center;gap:14px;border-radius:22px;padding:17px 20px;margin-top:12px;}
+  .balance .bl{flex:1;min-width:0;}
+  .balance .lbl{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);}
+  .balance .val{font-size:30px;font-weight:800;letter-spacing:-0.03em;margin-top:2px;color:var(--gold);line-height:1;}
+  .balance .val.settled{color:var(--ok);}
+  .balance .bsub{font-size:12.5px;color:var(--text2);font-weight:500;margin-top:5px;}
+  .balance .settle{flex:none;font-size:13px;font-weight:800;color:var(--ctaText);background:var(--gold);
+    padding:11px 15px;border-radius:13px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+  .balance .settle:active{filter:brightness(.97);transform:scale(.98);}
+  .balance .settle.hide{display:none;}
+
+  /* Status chips */
+  .chip{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:7px;white-space:nowrap;}
+  .chip.owed{color:var(--elec);background:color-mix(in srgb,var(--elec) 15%,transparent);border:1px solid color-mix(in srgb,var(--elec) 30%,transparent);}
+  .chip.paid{color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);}
+  .chip.partial{color:var(--ins);background:color-mix(in srgb,var(--ins) 16%,transparent);border:1px solid color-mix(in srgb,var(--ins) 30%,transparent);}
+
+  /* Electric trend */
+  .trend{border-radius:20px;padding:16px 18px;}
+  .trend .th{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .trend .tt{font-size:15px;font-weight:700;}
+  .trend .add{font-size:12.5px;font-weight:800;color:var(--gold);}
+  .spark{width:100%;height:56px;display:block;margin:6px 0;overflow:visible;}
+  .trend .stats{display:flex;gap:22px;margin-top:10px;}
+  .trend .stat .k{font-size:10.5px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .trend .stat .v{font-size:16px;font-weight:800;margin-top:2px;}
+  .trend .est{margin-top:12px;font-size:13px;color:var(--text2);font-weight:600;padding-top:11px;border-top:1px solid var(--sep);}
+  .trend .est b{color:var(--text);font-weight:800;}
+
+  /* Split controls */
+  .splitrow{display:flex;align-items:center;justify-content:space-between;background:var(--fill);border-radius:12px;
+    padding:13px 15px;margin-bottom:8px;font-size:14.5px;font-weight:600;}
+  .splitrow:active{filter:brightness(.97);}
+  .splitrow .pct{font-size:16px;font-weight:800;color:var(--gold);}
+
+  /* Calendar button */
+  .calbtn{width:100%;margin-top:10px;padding:14px;border-radius:15px;font-size:14px;font-weight:700;color:var(--text);
+    background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--strokeTop);display:flex;align-items:center;justify-content:center;gap:8px;}
+  .calbtn:active{transform:scale(.99);filter:brightness(.98);}
+
+  /* Payment sheet */
+  .pay-actions{display:flex;flex-direction:column;gap:9px;margin-bottom:10px;}
+  .pay-actions button{padding:15px 16px;border-radius:14px;font-size:15px;font-weight:700;text-align:left;
+    background:var(--fill);color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .pay-actions button:active{filter:brightness(.96);}
+  .pay-actions .primary{background:var(--gold);color:var(--ctaText);box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+  /* stacking: editor/payment sheets sit above settings & onboarding */
+  #setScrim,#obScrim{z-index:60;}
+  #payScrim,#pastScrim{z-index:70;}
+  #scrim{z-index:80;}
+</style>
+</head>
+<body>
+<div id="ambient"></div>
+
+<header>
+  <div class="brand">
+    <h1>Split</h1>
+    <span class="cyc" id="cycleLabel">—</span>
+  </div>
+  <div class="hbtns">
+    <button class="icobtn" id="btnTheme" title="Appearance">☾</button>
+    <button class="icobtn" id="btnGear" title="Settings">⚙</button>
+  </div>
+</header>
+
+<!-- BACKUP STATUS -->
+<button class="bkstrip glass" id="bkstrip">
+  <span class="bkdot" id="bkdot"></span>
+  <span class="bktext" id="bktext">Set up iCloud backup</span>
+  <span class="bkcta" id="bkcta">Back up</span>
+</button>
+
+<!-- HERO -->
+<div class="hero glass">
+  <div class="eyebrow">
+    <span>You charge</span>
+    <span class="who" id="whoWrap"><u id="whoName">roommate</u></span>
+  </div>
+  <div class="bignum tnum" id="charge">$0.00</div>
+  <div class="sub" id="chargeSub">Half of <b class="tnum" id="total">$0.00</b> total this cycle</div>
+  <div id="pendingWrap"></div>
+
+  <div class="compbar" id="compbar">
+    <span style="width:33.33%;background:var(--elec)"></span>
+    <span style="width:33.33%;background:var(--net)"></span>
+    <span style="width:33.34%;background:var(--ins)"></span>
+  </div>
+  <div class="legend">
+    <div class="li"><span class="dot" style="background:var(--elec)"></span>Electric</div>
+    <div class="li"><span class="dot" style="background:var(--net)"></span>Internet</div>
+    <div class="li"><span class="dot" style="background:var(--ins)"></span>Insurance</div>
+  </div>
+</div>
+
+<!-- BALANCE -->
+<div class="balance glass" id="balanceCard">
+  <div class="bl">
+    <div class="lbl" id="balLbl">Owes you</div>
+    <div class="val tnum" id="balVal">$0.00</div>
+    <div class="bsub" id="balSub">All settled</div>
+  </div>
+  <button class="settle" id="settleAll">Settle up</button>
+</div>
+
+<!-- UTILITIES -->
+<div class="sec">
+  <div class="sec-h">This cycle · tap an amount to edit</div>
+  <div id="rows" class="group icons glass"></div>
+  <button class="cta" id="btnLog">Log electric payment → next cycle</button>
+  <button class="calbtn" id="addPastBtn2" style="margin-top:8px;font-size:13px;">＋ Add a past electric bill</button>
+</div>
+
+<!-- ELECTRIC TREND -->
+<div class="sec" id="trendSec" style="display:none">
+  <div class="sec-h">Electric trend</div>
+  <div class="trend glass">
+    <div class="th">
+      <div class="tt">Past electric bills</div>
+      <button class="add" id="addPastBtn">＋ Add past bill</button>
+    </div>
+    <svg class="spark" id="spark" viewBox="0 0 300 56" preserveAspectRatio="none"></svg>
+    <div class="stats" id="trendStats"></div>
+    <div class="est" id="trendEst"></div>
+  </div>
+</div>
+
+<!-- REMINDERS -->
+<div class="sec">
+  <div class="sec-h">Coming up</div>
+  <div id="reminders" class="group icons glass"></div>
+  <button class="calbtn" id="calBtn">🗓️ Add due dates to Calendar (offline alerts)</button>
+</div>
+
+<!-- HISTORY -->
+<div class="sec">
+  <div class="sec-h">History · tap a cycle to record payment</div>
+  <div class="group glass" id="history"></div>
+</div>
+
+<div class="install glass" id="install">
+  <span class="x" id="installX">✕</span>
+  <b>Make it an app:</b> tap the Share button in Safari, then <b>Add to Home Screen</b>. It runs fully offline from there.
+</div>
+
+<div class="foot">All data stays on this device · offline</div>
+
+<!-- Editor sheet -->
+<div class="scrim" id="scrim">
+  <div class="sheet">
+    <h3 id="edTitle">Edit</h3>
+    <p id="edHint"></p>
+    <div class="field" id="edField">
+      <span class="pfx" id="edPfx">$</span>
+      <input id="edInput" type="text" inputmode="decimal" autocomplete="off">
+    </div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="edCancel">Cancel</button>
+      <button class="btn-save" id="edSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment sheet -->
+<div class="scrim" id="payScrim">
+  <div class="sheet">
+    <h3 id="payTitle">Record payment</h3>
+    <p id="payHint"></p>
+    <div class="pay-actions">
+      <button class="primary" id="payFull">Mark paid in full <span id="payFullAmt"></span></button>
+      <button id="payPartial">Enter partial amount <span>›</span></button>
+      <button id="payUnmark">Mark as unpaid <span></span></button>
+    </div>
+    <button class="btn-cancel" id="payClose" style="width:100%;padding:14px;border-radius:14px;font-weight:700;">Close</button>
+  </div>
+</div>
+
+<!-- Add past bill sheet -->
+<div class="scrim" id="pastScrim">
+  <div class="sheet">
+    <h3>Add past electric bill</h3>
+    <p>Backfill an earlier bill to build your trend. Marked as already paid.</p>
+    <div class="field"><span class="pfx">$</span><input id="pastAmt" type="text" inputmode="decimal" placeholder="Amount" autocomplete="off"></div>
+    <div class="field"><input id="pastDate" type="date"></div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="pastCancel">Cancel</button>
+      <button class="btn-save" id="pastSave">Add bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- iCloud onboarding sheet -->
+<div class="scrim" id="obScrim">
+  <div class="sheet">
+    <h3>Back up to iCloud Drive</h3>
+    <p>Your data lives on this device. Save a backup file to iCloud so it survives and reaches your other Apple devices.</p>
+    <ol>
+      <li>Tap <b>Back up</b> — the share sheet opens.</li>
+      <li>Choose <b>Save to Files</b> → <b>iCloud Drive</b>.</li>
+      <li>Keep the name <b>Split-backup.json</b> (tap Replace when re-saving).</li>
+      <li>On another device: open Split, tap <b>☁︎↓ Restore</b>, pick that file.</li>
+    </ol>
+    <button class="one" id="obGo">Back up now</button>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="scrim" id="setScrim">
+  <div class="sheet">
+    <h3>Settings</h3>
+    <div class="set-label">Appearance</div>
+    <div class="seg" id="themeSeg">
+      <span class="thumb" id="themeThumb"></span>
+      <button data-theme-val="auto">Auto</button>
+      <button data-theme-val="light">Light</button>
+      <button data-theme-val="dark">Dark</button>
+    </div>
+    <div class="set-label">Split — their share</div>
+    <div class="seg" id="splitSeg">
+      <span class="thumb" id="splitThumb"></span>
+      <button data-split-mode="flat">Flat</button>
+      <button data-split-mode="perUtility">Per-utility</button>
+    </div>
+    <div id="splitFlat">
+      <div class="splitrow" id="splitFlatRow">Roommate pays <span class="pct" id="flatPct">50%</span></div>
+    </div>
+    <div id="splitPer" style="display:none">
+      <div class="splitrow" data-split-k="electric">Electric <span class="pct" data-pct="electric">50%</span></div>
+      <div class="splitrow" data-split-k="internet">Internet <span class="pct" data-pct="internet">50%</span></div>
+      <div class="splitrow" data-split-k="insurance">Insurance <span class="pct" data-pct="insurance">50%</span></div>
+    </div>
+
+    <div class="set-label">Reminders</div>
+    <div class="set-row" id="setCal">Add due dates to Calendar <span class="chev">🗓️</span></div>
+
+    <div class="set-label">Data</div>
+    <div class="set-row" id="setBackup">Back up to iCloud <span class="chev">☁︎↑</span></div>
+    <div class="set-row" id="setRestore">Restore from iCloud <span class="chev">☁︎↓</span></div>
+    <div class="set-row" id="setWho">Who you charge <span class="chev" id="setWhoVal">roommate ›</span></div>
+    <div class="set-row danger" id="setReset">Reset everything <span class="chev">⟲</span></div>
+    <button class="one" id="setDone" style="margin-top:16px;background:var(--fill);color:var(--text);box-shadow:none;">Done</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept="application/json,.json" style="display:none">
+
+<script>
+"use strict";
+const KEY="split_utils_v1";
+const $=s=>document.querySelector(s);
+const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n)||0);
+const mdShort=d=>d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const parseISO=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+function today(){const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate());}
+function daysBetween(a,b){return Math.round((b-a)/86400000);}
+
+// ---- default state ----
+function defaultState(){
+  return {
+    who:"roommate",
+    electric:{ amount:null, nextDate:"2026-07-09", cycleDays:30 },  // manual, ~30-day cycle, always varies
+    internet:{ amount:90,   payDay:12, dueDay:13 },                 // autopay 12th, due 13th
+    insurance:{ amount:15.95, payDay:24 },                          // autopay 24th
+    history:[],
+    split:{ mode:"flat", flat:50, electric:50, internet:50, insurance:50 },  // their share, %
+    meta:{ lastBackup:null, backupHash:null, onboarded:false, theme:"auto" }
+  };
+}
+
+// their share of a cycle given amounts, honoring the split config
+function splitCfg(){ return Object.assign({mode:"flat",flat:50,electric:50,internet:50,insurance:50}, S.split||{}); }
+function chargeFor(e,n,i){
+  const sp=splitCfg();
+  if(sp.mode==="perUtility") return e*sp.electric/100 + n*sp.internet/100 + i*sp.insurance/100;
+  return (e+n+i)*sp.flat/100;
+}
+// what a stored cycle entry's charge should be (recompute if split changed and no explicit lock)
+function entryCharge(en){
+  if(typeof en.charge==="number") return en.charge;
+  return chargeFor(en.electric||0, en.internet||0, en.insurance||0);
+}
+function entryPaid(en){ return Number(en.paidAmount)||0; }
+function outstanding(en){ return Math.max(0, entryCharge(en)-entryPaid(en)); }
+
+// stable hash of the data that matters (ignores meta) — lets us know if there are unsaved-to-iCloud changes
+function dataHash(st){
+  const {meta,...core}=st;
+  const s=JSON.stringify(core);
+  let h=5381; for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}
+  return String(h>>>0);
+}
+
+/* ---- tiny IndexedDB mirror (more durable than localStorage) ---- */
+let _db=null;
+function idb(){
+  return new Promise(res=>{
+    if(_db)return res(_db);
+    try{
+      const r=indexedDB.open("splitDB",1);
+      r.onupgradeneeded=()=>r.result.createObjectStore("kv");
+      r.onsuccess=()=>{_db=r.result;res(_db);};
+      r.onerror=()=>res(null);
+    }catch(e){res(null);}
+  });
+}
+async function idbSet(k,v){const db=await idb();if(!db)return;try{const t=db.transaction("kv","readwrite");t.objectStore("kv").put(v,k);}catch(e){}}
+async function idbGet(k){const db=await idb();if(!db)return null;return new Promise(r=>{try{const rq=db.transaction("kv","readonly").objectStore("kv").get(k);rq.onsuccess=()=>r(rq.result??null);rq.onerror=()=>r(null);}catch(e){r(null);}});}
+
+let S=loadSync();
+function loadSync(){
+  try{const r=localStorage.getItem(KEY);if(r)return Object.assign(defaultState(),JSON.parse(r));}catch(e){}
+  return defaultState();
+}
+// after first paint, reconcile with IndexedDB in case localStorage was evicted by iOS
+async function reconcileFromIDB(){
+  try{
+    const backup=await idbGet(KEY);
+    if(!backup)return;
+    const local=localStorage.getItem(KEY);
+    // adopt IDB copy only if localStorage is missing/empty but IDB has real history
+    if(!local && backup && (backup.history?.length || backup.meta?.lastBackup)){
+      S=Object.assign(defaultState(),backup); save(); render();
+      toast("Recovered your data from device backup");
+    }
+  }catch(e){}
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast("Storage blocked — open in Safari");}
+  idbSet(KEY,S); // durable mirror
+}
+
+// ---- date helpers ----
+function nextDayOfMonth(day){
+  const t=today(); let d=new Date(t.getFullYear(),t.getMonth(),day);
+  if(d<t) d=new Date(t.getFullYear(),t.getMonth()+1,day);
+  return d;
+}
+function currentCycleLabel(){
+  return parseISO(S.electric.nextDate).toLocaleDateString("en-US",{month:"long",year:"numeric"});
+}
+function whenText(d){
+  const n=daysBetween(today(),d);
+  if(n<0) return {t:`${-n}d overdue`,c:"now"};
+  if(n===0) return {t:"today",c:"now"};
+  if(n===1) return {t:"tomorrow",c:"soon"};
+  return {t:`in ${n} days`,c:n<=5?"soon":"later"};
+}
+
+// ---- totals ----
+function totals(){
+  const e=Number(S.electric.amount)||0, n=Number(S.internet.amount)||0, i=Number(S.insurance.amount)||0;
+  const total=e+n+i;
+  return {e,n,i,total,charge:chargeFor(e,n,i), electricPending:S.electric.amount==null};
+}
+
+// ---- render ----
+function render(){
+  const T=totals();
+  const sp=splitCfg();
+  $("#cycleLabel").textContent=currentCycleLabel()+" cycle";
+  $("#whoName").textContent=S.who||"roommate";
+  $("#charge").textContent=money(T.charge);
+  $("#total").textContent=money(T.total);
+  const shareTxt = sp.mode==="perUtility" ? "Their share of" : (sp.flat===50?"Half of":sp.flat+"% of");
+  $("#chargeSub").innerHTML=`${shareTxt} <b class="tnum" id="total">${money(T.total)}</b> total this cycle`;
+
+  $("#pendingWrap").innerHTML = T.electricPending
+    ? `<span class="pending">⚡ Electric not entered yet — total isn't final</span>` : "";
+
+  renderBalance();
+  renderTrend();
+
+  // composition
+  const denom=T.total||1;
+  const cb=$("#compbar");
+  cb.children[0].style.width=(T.e/denom*100)+"%";
+  cb.children[1].style.width=(T.n/denom*100)+"%";
+  cb.children[2].style.width=(T.i/denom*100)+"%";
+
+  // rows
+  const eDate=parseISO(S.electric.nextDate);
+  const rows=[
+    {k:"electric",color:"var(--elec)",glyph:"⚡",name:"Electric",badge:"",amt:S.electric.amount,
+      meta:`Manual · next bill <span class="tap" data-edit="edate">${mdShort(eDate)}</span> · varies`},
+    {k:"internet",color:"var(--net)",glyph:"🌐",name:"Internet",badge:"Autopay",amt:S.internet.amount,
+      meta:`Auto-pays the ${ord(S.internet.payDay)} · due the ${ord(S.internet.dueDay)}`},
+    {k:"insurance",color:"var(--ins)",glyph:"🛡️",name:"Insurance",badge:"Autopay",amt:S.insurance.amount,
+      meta:`Auto-pays the ${ord(S.insurance.payDay)}`}
+  ];
+  $("#rows").innerHTML=rows.map(r=>`
+    <div class="row">
+      <div class="tile" style="background:color-mix(in srgb,${r.color} 18%,transparent);color:${r.color}">${r.glyph}</div>
+      <div class="info">
+        <div class="name">${r.name} ${r.badge?`<span class="badge">${r.badge}</span>`:""}</div>
+        <div class="meta">${r.meta}</div>
+      </div>
+      <div class="amt ${r.amt==null?"empty":""}" data-edit="amt" data-k="${r.k}">
+        ${r.amt==null?"Add":money(r.amt)}<span class="pen">✎</span>
+      </div>
+    </div>`).join("");
+
+  $("#btnLog").disabled=T.electricPending;
+  $("#btnLog").textContent=T.electricPending?"Enter electric amount to log":"Log electric payment → next cycle";
+
+  renderReminders();
+  renderHistory();
+  updateBackupStatus();
+}
+function ord(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+function renderReminders(){
+  const items=[];
+  const eDate=parseISO(S.electric.nextDate);
+  items.push({ic:"⚡",r1:S.electric.amount==null?"Enter electric bill":"Electric logged for this cycle",
+    r2:S.electric.amount==null?"Manual payment — amount varies":money(S.electric.amount),date:eDate});
+  items.push({ic:"🌐",r1:`Internet auto-pays ${money(S.internet.amount)}`,r2:`Due the ${ord(S.internet.dueDay)}`,date:nextDayOfMonth(S.internet.payDay)});
+  items.push({ic:"🛡️",r1:`Insurance auto-pays ${money(S.insurance.amount)}`,r2:"Automatic",date:nextDayOfMonth(S.insurance.payDay)});
+  items.sort((a,b)=>a.date-b.date);
+  $("#reminders").innerHTML=items.map(it=>{
+    const w=whenText(it.date);
+    return `<div class="rem">
+      <div class="ic">${it.ic}</div>
+      <div class="rt"><div class="r1">${it.r1}</div><div class="r2">${it.r2} · ${mdShort(it.date)}</div></div>
+      <div class="when ${w.c}">${w.t}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderHistory(){
+  const h=$("#history");
+  if(!S.history.length){
+    h.innerHTML=`<div class="empty-state">No cycles logged yet.<br>When you pay the electric bill, tap <b>Log electric payment</b> to save this month here.</div>`;
+    return;
+  }
+  h.innerHTML=S.history.slice().reverse().map(e=>{
+    const ch=entryCharge(e), pd=entryPaid(e), out=outstanding(e);
+    let chip;
+    if(out<=0.005) chip=`<span class="chip paid">Paid</span>`;
+    else if(pd>0)  chip=`<span class="chip partial">${money(pd)} paid</span>`;
+    else           chip=`<span class="chip owed">Owed</span>`;
+    return `
+    <div class="hitem" data-pay="${e.id}">
+      <div class="hd">
+        <div class="hdate">${parseISO(e.date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})} ${chip}</div>
+        <div class="hbreak">⚡ ${money(e.electric)} · 🌐 ${money(e.internet)} · 🛡️ ${money(e.insurance)}</div>
+      </div>
+      <div class="hcharge">
+        <div class="c tnum">${money(ch)}</div>
+        <div class="t tnum">${out>0.005?"owes "+money(out):"settled"}</div>
+      </div>
+      <button class="del" data-del="${e.id}">✕</button>
+    </div>`;}).join("");
+}
+
+// ---- running balance ----
+function renderBalance(){
+  const owed=S.history.reduce((s,e)=>s+outstanding(e),0);
+  const unpaid=S.history.filter(e=>outstanding(e)>0.005).length;
+  const val=$("#balVal"), sub=$("#balSub"), lbl=$("#balLbl"), btn=$("#settleAll");
+  lbl.textContent=(S.who||"roommate")+" owes you";
+  if(owed<=0.005){
+    val.textContent="$0.00"; val.classList.add("settled");
+    sub.textContent=S.history.length?"All settled up 🎉":"No cycles logged yet";
+    btn.classList.add("hide");
+  }else{
+    val.textContent=money(owed); val.classList.remove("settled");
+    sub.textContent=`${unpaid} unpaid cycle${unpaid>1?"s":""}`;
+    btn.classList.remove("hide");
+  }
+}
+$("#settleAll").onclick=()=>{
+  if(!confirm("Mark all outstanding cycles as paid in full?"))return;
+  const t=iso(today());
+  S.history.forEach(e=>{ if(outstanding(e)>0.005){ e.paidAmount=entryCharge(e); e.paid=true; e.paidDate=t; }});
+  save(); render(); toast("All settled up");
+};
+
+// ---- electric trend + estimate ----
+function electricSeries(){
+  return S.history.filter(e=>Number(e.electric)>0)
+    .sort((a,b)=>parseISO(a.date)-parseISO(b.date))
+    .map(e=>({d:parseISO(e.date),v:Number(e.electric)}));
+}
+function estimateNextElectric(){
+  const s=electricSeries().map(x=>x.v);
+  if(!s.length) return null;
+  const last3=s.slice(-3);
+  return last3.reduce((a,b)=>a+b,0)/last3.length;
+}
+function renderTrend(){
+  const sec=$("#trendSec"), series=electricSeries();
+  if(series.length<1){ sec.style.display="none"; return; }
+  sec.style.display="";
+  const vals=series.map(x=>x.v);
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length, mx=Math.max(...vals), mn=Math.min(...vals);
+  $("#trendStats").innerHTML=`
+    <div class="stat"><div class="k">Avg</div><div class="v tnum">${money(avg)}</div></div>
+    <div class="stat"><div class="k">High</div><div class="v tnum">${money(mx)}</div></div>
+    <div class="stat"><div class="k">Low</div><div class="v tnum">${money(mn)}</div></div>`;
+  const est=estimateNextElectric();
+  $("#trendEst").innerHTML = series.length>=2
+    ? `Estimated next bill <b class="tnum">≈ ${money(est)}</b> <span style="color:var(--text3)">(avg of last ${Math.min(3,vals.length)})</span>`
+    : `Add another bill to estimate your next one.`;
+  // sparkline (bars)
+  const W=300,H=56,n=vals.length,gap=n>1?4:0,bw=(W-gap*(n-1))/n;
+  const top=mx*1.08||1;
+  const bars=vals.map((v,idx)=>{
+    const bh=Math.max(3,(v/top)*H), x=idx*(bw+gap), y=H-bh, last=idx===n-1;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2"
+      fill="var(--elec)" opacity="${last?1:0.5}"></rect>`;
+  }).join("");
+  $("#spark").innerHTML=bars;
+}
+
+// ---- editor sheet ----
+let editCtx=null;
+function openEditor(cfg){
+  editCtx=cfg;
+  $("#edTitle").textContent=cfg.title;
+  $("#edHint").textContent=cfg.hint||"";
+  const inp=$("#edInput"), pfx=$("#edPfx");
+  if(cfg.type==="date"){pfx.style.display="none";inp.type="date";inp.inputMode="none";inp.value=cfg.value||"";}
+  else if(cfg.type==="text"){pfx.style.display="none";inp.type="text";inp.inputMode="text";inp.value=cfg.value||"";}
+  else{pfx.style.display="";inp.type="text";inp.inputMode="decimal";inp.value=cfg.value!=null?cfg.value:"";}
+  $("#scrim").classList.add("on");
+  setTimeout(()=>{inp.focus();if(cfg.type==="number"||cfg.type==="text")inp.select();},60);
+}
+function closeEditor(){$("#scrim").classList.remove("on");editCtx=null;}
+$("#edCancel").onclick=closeEditor;
+$("#scrim").addEventListener("click",e=>{if(e.target===$("#scrim"))closeEditor();});
+$("#edSave").onclick=()=>{
+  if(!editCtx)return;
+  const raw=$("#edInput").value;
+  editCtx.onSave(raw);
+  closeEditor(); save(); render();
+};
+
+// amount / date / name taps
+$("#rows").addEventListener("click",e=>{
+  const amt=e.target.closest('[data-edit="amt"]');
+  const dt=e.target.closest('[data-edit="edate"]');
+  if(amt){
+    const k=amt.dataset.k, cur=S[k].amount;
+    const names={electric:"Electric",internet:"Internet",insurance:"Insurance"};
+    openEditor({title:`${names[k]} amount`,hint:"Enter the bill amount for this cycle.",type:"number",
+      value:cur!=null?cur:"",onSave:v=>{const n=parseFloat(String(v).replace(/[^0-9.]/g,""));S[k].amount=isNaN(n)?null:n;}});
+  } else if(dt){
+    openEditor({title:"Next electric bill",hint:"When is the next electric bill dated?",type:"date",
+      value:S.electric.nextDate,onSave:v=>{if(v)S.electric.nextDate=v;}});
+  }
+});
+$("#whoName").addEventListener("click",()=>{
+  openEditor({title:"Who you charge",hint:"Name shown on the split.",type:"text",value:S.who,
+    onSave:v=>{S.who=(v||"").trim()||"roommate";}});
+});
+
+// log electric → advance cycle
+$("#btnLog").addEventListener("click",()=>{
+  const T=totals();
+  if(T.electricPending)return;
+  S.history.push({id:Date.now(),date:iso(today()),electric:T.e,internet:T.n,insurance:T.i,total:T.total,charge:T.charge,
+    paid:false,paidAmount:0,paidDate:null});
+  const d=parseISO(S.electric.nextDate); d.setDate(d.getDate()+(S.electric.cycleDays||30));
+  S.electric.nextDate=iso(d);
+  S.electric.amount=null;
+  save(); render();
+  toast(`Logged ${money(T.charge)} · ${S.who||"roommate"} owes ${money(T.charge)}`);
+});
+
+// history: tap row → payment sheet, tap ✕ → delete
+$("#history").addEventListener("click",e=>{
+  const del=e.target.closest("[data-del]");
+  if(del){ e.stopPropagation(); const id=Number(del.dataset.del);
+    S.history=S.history.filter(x=>x.id!==id); save(); render(); return; }
+  const row=e.target.closest("[data-pay]");
+  if(row) openPay(Number(row.dataset.pay));
+});
+
+// ---- payment sheet ----
+let payId=null;
+function openPay(id){
+  const en=S.history.find(x=>x.id===id); if(!en)return;
+  payId=id;
+  const ch=entryCharge(en), out=outstanding(en), who=S.who||"roommate";
+  $("#payTitle").textContent=parseISO(en.date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  $("#payHint").textContent = out>0.005 ? `${who} owes ${money(out)} of ${money(ch)}.` : `Paid in full — ${money(ch)}.`;
+  $("#payFullAmt").textContent = out>0.005?money(out):"✓";
+  $("#payScrim").classList.add("on");
+}
+function closePay(){ $("#payScrim").classList.remove("on"); payId=null; }
+$("#payClose").onclick=closePay;
+$("#payScrim").addEventListener("click",e=>{if(e.target===$("#payScrim"))closePay();});
+$("#payFull").onclick=()=>{ const en=S.history.find(x=>x.id===payId); if(!en)return;
+  en.paidAmount=entryCharge(en); en.paid=true; en.paidDate=iso(today()); save(); render(); closePay(); toast("Marked paid"); };
+$("#payUnmark").onclick=()=>{ const en=S.history.find(x=>x.id===payId); if(!en)return;
+  en.paidAmount=0; en.paid=false; en.paidDate=null; save(); render(); closePay(); toast("Marked unpaid"); };
+$("#payPartial").onclick=()=>{ const en=S.history.find(x=>x.id===payId); if(!en)return; const id=payId; closePay();
+  openEditor({title:"Partial payment",hint:`Total paid so far toward ${money(entryCharge(en))}.`,type:"number",
+    value:entryPaid(en)||"",onSave:v=>{ const en2=S.history.find(x=>x.id===id); if(!en2)return;
+      const p=parseFloat(String(v).replace(/[^0-9.]/g,"")); en2.paidAmount=isNaN(p)?0:p; en2.paid=outstanding(en2)<=0.005; en2.paidDate=iso(today()); }});
+};
+
+// ---- add past electric bill ----
+function openPast(){ $("#pastAmt").value=""; $("#pastDate").value=""; $("#pastScrim").classList.add("on"); }
+$("#addPastBtn").onclick=openPast;
+$("#addPastBtn2").onclick=openPast;
+$("#pastCancel").onclick=()=>$("#pastScrim").classList.remove("on");
+$("#pastScrim").addEventListener("click",e=>{if(e.target===$("#pastScrim"))$("#pastScrim").classList.remove("on");});
+$("#pastSave").onclick=()=>{
+  const amt=parseFloat(String($("#pastAmt").value).replace(/[^0-9.]/g,""));
+  const dstr=$("#pastDate").value;
+  if(isNaN(amt)||!dstr){ toast("Enter an amount and date"); return; }
+  const n=Number(S.internet.amount)||0, i=Number(S.insurance.amount)||0, total=amt+n+i;
+  const ch=chargeFor(amt,n,i);
+  S.history.push({id:Date.now(),date:dstr,electric:amt,internet:n,insurance:i,total,charge:ch,
+    paid:true,paidAmount:ch,paidDate:dstr});  // past bills assumed already settled
+  $("#pastScrim").classList.remove("on"); save(); render(); toast("Past bill added");
+};
+
+// ---- iCloud backup (save a file to iCloud Drive via the share sheet) ----
+function backupBlob(){
+  S.meta=S.meta||{};
+  return new File([JSON.stringify(S,null,2)],"Split-backup.json",{type:"application/json"});
+}
+async function doBackup(){
+  const file=backupBlob();
+  let done=false;
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:"Split-backup.json"});
+      done=true; // user completed the share sheet (Save to Files → iCloud Drive)
+    }
+  }catch(e){ if(e && e.name==="AbortError") return; /* user cancelled */ }
+  if(!done){ // fallback: direct download (then Save to Files manually)
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(file); a.download="Split-backup.json"; a.click();
+  }
+  S.meta.lastBackup=Date.now(); S.meta.backupHash=dataHash(S);
+  save(); updateBackupStatus();
+  toast("Backed up · keep the file in iCloud Drive");
+}
+function openBackup(){
+  if(!S.meta || !S.meta.onboarded){ $("#obScrim").classList.add("on"); }
+  else { doBackup(); }
+}
+$("#bkstrip").onclick=openBackup;
+$("#obGo").onclick=()=>{ S.meta=S.meta||{}; S.meta.onboarded=true; save(); $("#obScrim").classList.remove("on"); doBackup(); };
+$("#obScrim").addEventListener("click",e=>{if(e.target===$("#obScrim"))$("#obScrim").classList.remove("on");});
+
+// ---- restore (merge, so an older file never wipes newer entries) ----
+$("#setRestore").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const inc=JSON.parse(rd.result);
+      const byId={};
+      (S.history||[]).concat(inc.history||[]).forEach(h=>{ if(h&&h.id!=null) byId[h.id]=h; });
+      const merged=Object.assign(defaultState(),inc,S,{
+        history:Object.values(byId).sort((a,b)=>parseISO(a.date)-parseISO(b.date))
+      });
+      // prefer incoming settings if this device looks empty
+      if(!(S.history||[]).length){ merged.who=inc.who||merged.who; merged.electric=inc.electric||merged.electric;
+        merged.internet=inc.internet||merged.internet; merged.insurance=inc.insurance||merged.insurance; merged.split=inc.split||merged.split; }
+      merged.meta=Object.assign({},S.meta,inc.meta);
+      S=merged; save(); render(); updateBackupStatus();
+      toast("Restored · "+(S.history.length)+" cycles merged");
+    }catch(err){ toast("Couldn't read that file"); }
+  };
+  rd.readAsText(f); e.target.value="";
+};
+
+$("#setReset").onclick=()=>{
+  if(confirm("Reset everything to defaults? Local history will be cleared (your iCloud backup file is untouched).")){
+    S=defaultState(); applyTheme(); save(); render(); toast("Reset");
+  }
+};
+
+// ---- settings sheet ----
+function openSettings(){ $("#setWhoVal").textContent=(S.who||"roommate")+" ›"; syncThemeUI(); syncSplitUI(); $("#setScrim").classList.add("on"); }
+function closeSettings(){ $("#setScrim").classList.remove("on"); }
+$("#btnGear").onclick=openSettings;
+$("#setDone").onclick=closeSettings;
+$("#setScrim").addEventListener("click",e=>{if(e.target===$("#setScrim"))closeSettings();});
+$("#setBackup").onclick=()=>{ closeSettings(); openBackup(); };
+$("#setWho").onclick=()=>{
+  openEditor({title:"Who you charge",hint:"Name shown on the split.",type:"text",value:S.who,
+    onSave:v=>{S.who=(v||"").trim()||"roommate";}});
+};
+
+// ---- theme (auto / light / dark) ----
+function resolvedTheme(){
+  const t=(S.meta&&S.meta.theme)||"auto";
+  if(t==="auto") return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
+  return t;
+}
+function applyTheme(){
+  const r=resolvedTheme();
+  document.documentElement.dataset.theme=r;
+  const tc=$("#tc"); if(tc) tc.content = r==="dark"?"#07090E":"#EAEEF5";
+  $("#btnTheme").textContent = r==="dark"?"☾":"☀";
+  syncThemeUI();
+}
+function syncThemeUI(){
+  const t=(S.meta&&S.meta.theme)||"auto";
+  const btns=[...document.querySelectorAll("#themeSeg [data-theme-val]")];
+  let idx=0;
+  btns.forEach((b,i)=>{ const on=b.dataset.themeVal===t; b.classList.toggle("sel",on); if(on)idx=i; });
+  const thumb=$("#themeThumb");
+  thumb.style.width="calc((100% - 6px)/3)";
+  thumb.style.transform=`translateX(${idx*100}%)`;
+}
+document.querySelectorAll("#themeSeg [data-theme-val]").forEach(b=>{
+  b.onclick=()=>{ S.meta=S.meta||{}; S.meta.theme=b.dataset.themeVal; save(); applyTheme(); };
+});
+$("#btnTheme").onclick=()=>{ S.meta=S.meta||{}; S.meta.theme = resolvedTheme()==="dark"?"light":"dark"; save(); applyTheme(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{ if(((S.meta&&S.meta.theme)||"auto")==="auto") applyTheme(); });
+
+// ---- backup freshness indicator ----
+function updateBackupStatus(){
+  const dot=$("#bkdot"), txt=$("#bktext"), cta=$("#bkcta");
+  const m=S.meta||{};
+  const changed = m.backupHash!==dataHash(S);
+  dot.className="bkdot"; cta.classList.remove("hide"); cta.textContent="Back up";
+  if(!m.lastBackup){
+    dot.classList.add("bad"); txt.innerHTML="<b>Not backed up yet</b> — save to iCloud"; cta.textContent="Set up";
+    return;
+  }
+  const days=daysBetween(new Date(m.lastBackup),Date.now());
+  const ago = days<=0?"today":(days===1?"yesterday":days+" days ago");
+  if(changed){ dot.classList.add("warn"); txt.innerHTML="<b>Changes not backed up</b> · last "+ago; }
+  else if(days>=7){ dot.classList.add("bad"); txt.innerHTML="<b>Backup is "+days+" days old</b> · refresh it"; }
+  else{ dot.classList.add("ok"); txt.innerHTML="Backed up "+ago; cta.classList.add("hide"); }
+}
+
+// toast
+let toastT;
+function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("on");
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),2200);}
+
+// install hint (only in Safari, not standalone)
+if(!(window.navigator.standalone)){ $("#install").style.display="block"; }
+$("#installX").onclick=()=>$("#install").style.display="none";
+
+// ---- split (their share) ----
+function syncSplitUI(){
+  const sp=splitCfg();
+  const btns=[...document.querySelectorAll("#splitSeg [data-split-mode]")];
+  let idx=0;
+  btns.forEach((b,i)=>{ const on=b.dataset.splitMode===sp.mode; b.classList.toggle("sel",on); if(on)idx=i; });
+  const thumb=$("#splitThumb"); thumb.style.width="calc((100% - 6px)/2)"; thumb.style.transform=`translateX(${idx*100}%)`;
+  $("#splitFlat").style.display = sp.mode==="perUtility"?"none":"";
+  $("#splitPer").style.display  = sp.mode==="perUtility"?"":"none";
+  $("#flatPct").textContent = sp.flat+"%";
+  document.querySelectorAll("#splitPer [data-pct]").forEach(el=>{ el.textContent=sp[el.dataset.pct]+"%"; });
+}
+document.querySelectorAll("#splitSeg [data-split-mode]").forEach(b=>{
+  b.onclick=()=>{ S.split=splitCfg(); S.split.mode=b.dataset.splitMode; save(); syncSplitUI(); render(); };
+});
+function editPct(key,label){
+  const sp=splitCfg();
+  openEditor({title:label+" — their share %",hint:"0–100. The rest is yours.",type:"number",value:sp[key],
+    onSave:v=>{ let p=parseFloat(String(v).replace(/[^0-9.]/g,"")); if(isNaN(p))return; p=Math.max(0,Math.min(100,p));
+      S.split=splitCfg(); S.split[key]=p; syncSplitUI(); }});
+}
+$("#splitFlatRow").onclick=()=>editPct("flat","Split");
+document.querySelectorAll("#splitPer [data-split-k]").forEach(row=>{
+  const k=row.dataset.splitK; row.onclick=()=>editPct(k, k[0].toUpperCase()+k.slice(1));
+});
+
+// ---- Add due dates to Calendar (offline alerts via .ics) ----
+function pad(n){return String(n).padStart(2,"0");}
+function icsDate(d){return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;}
+function buildICS(){
+  const dtstamp=new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  const e=parseISO(S.electric.nextDate);
+  const net=Number(S.internet.amount)||0, ins=Number(S.insurance.amount)||0;
+  function vevent(uid,start,rule,summary,trigDays){
+    return ["BEGIN:VEVENT",`UID:${uid}-${Date.now()}@split.local`,`DTSTAMP:${dtstamp}`,
+      `DTSTART;VALUE=DATE:${icsDate(start)}`,`RRULE:${rule}`,`SUMMARY:${summary}`,"TRANSP:TRANSPARENT",
+      "BEGIN:VALARM",`TRIGGER:-P${trigDays}D`,"ACTION:DISPLAY","DESCRIPTION:Split reminder","END:VALARM",
+      "END:VEVENT"].join("\r\n");
+  }
+  const elecStart=e<today()?today():e;
+  const body=[
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Split//Utilities//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    vevent("elec",elecStart,`FREQ=DAILY;INTERVAL=${S.electric.cycleDays||30}`,"⚡ Electric bill — enter amount in Split (manual)",2),
+    vevent("net",nextDayOfMonth(S.internet.payDay),"FREQ=MONTHLY;BYMONTHDAY="+S.internet.payDay,`🌐 Internet autopays ${money(net)}`,1),
+    vevent("ins",nextDayOfMonth(S.insurance.payDay),"FREQ=MONTHLY;BYMONTHDAY="+S.insurance.payDay,`🛡️ Insurance autopays ${money(ins)}`,1),
+    "END:VCALENDAR"
+  ].join("\r\n");
+  return new File([body],"Split-reminders.ics",{type:"text/calendar"});
+}
+async function addToCalendar(){
+  const file=buildICS();
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:"Split reminders"}); toast("Opening Calendar…"); return; }
+  }catch(err){ if(err&&err.name==="AbortError") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download="Split-reminders.ics"; a.click();
+  toast("Downloaded · open it to add to Calendar");
+}
+$("#calBtn").onclick=addToCalendar;
+$("#setCal").onclick=()=>{ closeSettings(); addToCalendar(); };
+
+applyTheme();
+render();
+reconcileFromIDB();
+</script>
+</body>
+</html>
