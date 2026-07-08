@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Utilities">
+<meta name="theme-color" id="tc" content="#07090E">
+<meta name="color-scheme" content="light dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Utilities</title>
+<script>
+// set theme before paint to avoid a flash
+(function(){try{
+  var s=JSON.parse(localStorage.getItem("split_utils_v1")||"{}");
+  var t=(s.meta&&s.meta.theme)||"auto";
+  var dark = t==="dark" || (t==="auto" && matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.dataset.theme = dark?"dark":"light";
+  var tc=document.getElementById("tc"); if(tc) tc.content = dark?"#07090E":"#EAEEF5";
+}catch(e){document.documentElement.dataset.theme="dark";}})();
+</script>
+<style>
+  /* ===== Theme tokens ===== */
+  html[data-theme="dark"]{
+    --bg:#07090E; --text:#F1F5FB; --text2:rgba(233,240,250,.62); --text3:rgba(233,240,250,.40);
+    --glass:rgba(24,30,44,.55); --glass2:rgba(32,40,57,.72); --glassMenu:rgba(28,35,50,.7);
+    --stroke:rgba(255,255,255,.10); --strokeTop:rgba(255,255,255,.20); --sep:rgba(255,255,255,.09);
+    --fill:rgba(255,255,255,.07); --shadow:0 12px 34px rgba(0,0,0,.5);
+    --gold:#F0C14B; --elec:#F6A860; --net:#4FD0BC; --ins:#A79BFF; --danger:#FF7A66; --ok:#4FD0BC;
+    --blob1:rgba(240,193,75,.22); --blob2:rgba(79,208,188,.20); --blob3:rgba(167,155,255,.24);
+    --ctaText:#1c1608;
+  }
+  html[data-theme="light"]{
+    --bg:#E7ECF3; --text:#0C1220; --text2:rgba(18,26,42,.60); --text3:rgba(18,26,42,.42);
+    --glass:rgba(255,255,255,.55); --glass2:rgba(255,255,255,.75); --glassMenu:rgba(255,255,255,.68);
+    --stroke:rgba(255,255,255,.7); --strokeTop:rgba(255,255,255,.95); --sep:rgba(12,20,40,.10);
+    --fill:rgba(12,20,40,.05); --shadow:0 12px 30px rgba(40,52,84,.16);
+    --gold:#B67C10; --elec:#D97A24; --net:#0E9384; --ins:#6B5CE0; --danger:#DC5238; --ok:#0E9384;
+    --blob1:rgba(245,196,86,.55); --blob2:rgba(72,205,186,.5); --blob3:rgba(150,138,255,.48);
+    --ctaText:#231a05;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  #ambient{position:fixed;inset:0;z-index:-1;background:
+      radial-gradient(46% 38% at 12% 4%, var(--blob1), transparent 70%),
+      radial-gradient(52% 44% at 94% 16%, var(--blob2), transparent 70%),
+      radial-gradient(62% 52% at 50% 104%, var(--blob3), transparent 74%),
+      var(--bg);}
+  body{
+    background:transparent; color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; letter-spacing:-0.01em;
+    padding: env(safe-area-inset-top) max(16px,env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+    max-width:520px; margin:0 auto; min-height:100vh; transition:color .3s;
+  }
+  .tnum{font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1;}
+  button{font-family:inherit; cursor:pointer; border:none; background:none; color:inherit;}
+
+  /* Glass material */
+  .glass{background:var(--glass); -webkit-backdrop-filter:blur(22px) saturate(180%);
+    backdrop-filter:blur(22px) saturate(180%); border:1px solid var(--stroke);
+    box-shadow:var(--shadow), inset 0 1px 0 var(--strokeTop);}
+
+  /* Header */
+  header{display:flex; align-items:center; justify-content:space-between; padding:16px 4px 12px;}
+  .brand{display:flex; align-items:baseline; gap:9px;}
+  .brand h1{font-size:26px; font-weight:800; letter-spacing:-0.03em; margin:0;}
+  .brand .cyc{font-size:12.5px; color:var(--text2); font-weight:600;}
+  .hbtns{display:flex; gap:9px;}
+  .icobtn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:var(--text);font-size:16px;
+    background:var(--glass); -webkit-backdrop-filter:blur(14px) saturate(160%); backdrop-filter:blur(14px) saturate(160%);
+    border:1px solid var(--stroke); box-shadow:inset 0 1px 0 var(--strokeTop);}
+  .icobtn:active{transform:scale(.92);}
+
+  /* Backup strip */
+  .bkstrip{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border-radius:16px;padding:12px 15px;margin:2px 0 4px;}
+  .bkstrip:active{transform:scale(.99);}
+  .bkdot{width:9px;height:9px;border-radius:50%;flex:none;background:var(--text3);}
+  .bkdot.ok{background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 20%,transparent);}
+  .bkdot.warn{background:var(--elec);box-shadow:0 0 0 4px color-mix(in srgb,var(--elec) 20%,transparent);}
+  .bkdot.bad{background:var(--danger);box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 22%,transparent);}
+  .bktext{flex:1;font-size:13.5px;font-weight:600;color:var(--text2);min-width:0;}
+  .bktext b{color:var(--text);font-weight:700;}
+  .bkcta{font-size:13px;font-weight:800;color:var(--gold);flex:none;}
+  .bkcta.hide{display:none;}
+
+  /* Hero */
+  .hero{border-radius:28px; padding:24px 22px 20px; position:relative; overflow:hidden; margin-top:2px;}
+  .hero::after{content:"";position:absolute;top:-45%;right:-15%;width:62%;height:130%;
+    background:radial-gradient(circle,color-mix(in srgb,var(--gold) 26%,transparent),transparent 66%);pointer-events:none;}
+  .eyebrow{display:flex;align-items:center;gap:9px;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:var(--gold);}
+  .eyebrow .who{color:var(--text2);letter-spacing:0;text-transform:none;font-weight:600;font-size:13px;}
+  .eyebrow .who u{text-decoration:none;border-bottom:1px dashed var(--text3);padding-bottom:1px;}
+  .bignum{font-size:clamp(54px,17.5vw,78px);font-weight:800;letter-spacing:-0.04em;line-height:.96;margin:12px 0 5px;color:var(--text);}
+  .sub{color:var(--text2);font-size:14px;font-weight:500;}
+  .sub b{color:var(--text);font-weight:700;}
+  .pending{display:inline-block;margin-top:11px;font-size:12px;font-weight:700;color:var(--elec);
+    background:color-mix(in srgb,var(--elec) 14%,transparent);border:1px solid color-mix(in srgb,var(--elec) 30%,transparent);
+    padding:5px 11px;border-radius:999px;}
+  .compbar{display:flex;height:9px;border-radius:6px;overflow:hidden;margin:18px 0 12px;background:var(--fill);}
+  .compbar span{display:block;height:100%;transition:width .5s cubic-bezier(.2,.7,.2,1);}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;}
+  .legend .li{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text2);font-weight:600;}
+  .dot{width:9px;height:9px;border-radius:3px;flex:none;}
+
+  /* Sections + iOS grouped lists */
+  .sec{margin-top:24px;}
+  .sec-h{font-size:13px;font-weight:600;color:var(--text2);margin:0 6px 9px;}
+  .group{border-radius:20px; overflow:hidden;}
+  .group > *{position:relative;}
+  .group > *:not(:last-child)::after{content:"";position:absolute;left:16px;right:0;bottom:0;height:1px;background:var(--sep);}
+  .group.icons > *:not(:last-child)::after{left:64px;}
+
+  /* Rows */
+  .row{display:flex;align-items:center;gap:14px;padding:14px 16px;}
+  .tile{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;font-size:17px;}
+  .row .info{flex:1;min-width:0;}
+  .row .name{font-size:17px;font-weight:600;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px;}
+  .badge{font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:6px;
+    background:color-mix(in srgb,var(--net) 16%,transparent);color:var(--net);border:1px solid color-mix(in srgb,var(--net) 28%,transparent);}
+  .row .meta{font-size:13px;color:var(--text2);font-weight:500;margin-top:3px;}
+  .row .meta .tap{color:var(--text);border-bottom:1px dashed var(--text3);}
+  .amt{font-size:19px;font-weight:700;letter-spacing:-0.02em;padding:6px 2px 6px 10px;border-radius:10px;flex:none;display:flex;align-items:center;gap:5px;}
+  .amt:active{background:var(--fill);}
+  .amt .pen{font-size:11px;color:var(--text3);}
+  .amt.empty{color:var(--text3);font-weight:600;}
+
+  /* Primary action */
+  .cta{width:100%;margin-top:12px;background:var(--gold);color:var(--ctaText);font-weight:800;font-size:16px;
+    padding:16px;border-radius:16px;box-shadow:0 8px 22px color-mix(in srgb,var(--gold) 30%,transparent), inset 0 1px 0 rgba(255,255,255,.3);}
+  .cta:active{transform:translateY(1px) scale(.995);filter:brightness(.98);}
+  .cta:disabled{background:var(--fill);color:var(--text3);box-shadow:none;}
+
+  /* Reminders (grouped) */
+  .rem{display:flex;align-items:center;gap:13px;padding:13px 15px;}
+  .rem .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:16px;flex:none;background:var(--fill);}
+  .rem .rt{flex:1;min-width:0;}
+  .rem .r1{font-size:15px;font-weight:600;}
+  .rem .r2{font-size:12.5px;color:var(--text2);margin-top:2px;font-weight:500;}
+  .rem .when{font-size:12.5px;font-weight:700;flex:none;text-align:right;}
+  .when.soon{color:var(--elec);} .when.now{color:var(--danger);} .when.later{color:var(--text2);}
+
+  /* History (grouped) */
+  .hitem{display:flex;align-items:center;gap:12px;padding:14px 16px;}
+  .hitem .hd{flex:1;}
+  .hitem .hdate{font-size:15px;font-weight:600;}
+  .hitem .hbreak{font-size:12px;color:var(--text2);margin-top:2px;font-weight:500;}
+  .hitem .hcharge{text-align:right;}
+  .hitem .hcharge .c{font-size:16px;font-weight:800;color:var(--gold);}
+  .hitem .hcharge .t{font-size:11.5px;color:var(--text3);font-weight:600;margin-top:1px;}
+  .hitem .del{color:var(--text3);font-size:15px;padding:6px;margin:-6px;}
+  .empty-state{padding:26px 18px;text-align:center;color:var(--text2);font-size:13.5px;line-height:1.5;font-weight:500;}
+
+  /* Install hint */
+  .install{border-radius:16px;padding:13px 15px;font-size:13px;color:var(--text2);margin-top:16px;line-height:1.5;font-weight:500;display:none;}
+  .install b{color:var(--text);font-weight:700;}
+  .install .x{float:right;color:var(--text3);font-size:16px;padding:0 4px;}
+
+  /* Segmented control */
+  .seg{position:relative;display:flex;background:var(--fill);border-radius:12px;padding:3px;}
+  .seg button{flex:1;position:relative;z-index:1;border-radius:9px;padding:9px 0;font-size:14px;font-weight:600;color:var(--text2);transition:color .25s;}
+  .seg button.sel{color:var(--text);}
+  .seg .thumb{position:absolute;top:3px;bottom:3px;left:3px;border-radius:9px;background:var(--glass2);
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--stroke);
+    box-shadow:0 2px 6px rgba(0,0,0,.18), inset 0 1px 0 var(--strokeTop);transition:transform .3s cubic-bezier(.3,.9,.3,1);}
+
+  /* Modals / sheets */
+  .scrim{position:fixed;inset:0;background:rgba(4,7,12,.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+    display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0 10px calc(10px + env(safe-area-inset-bottom));}
+  .scrim.on{display:flex;}
+  .sheet{width:100%;max-width:500px;border-radius:26px;padding:20px;
+    background:var(--glass2); -webkit-backdrop-filter:blur(30px) saturate(180%); backdrop-filter:blur(30px) saturate(180%);
+    border:1px solid var(--stroke); box-shadow:0 -8px 40px rgba(0,0,0,.35), inset 0 1px 0 var(--strokeTop);
+    animation:pop .26s cubic-bezier(.2,.9,.2,1);}
+  @keyframes pop{from{transform:translateY(16px);opacity:.5;}to{transform:none;opacity:1;}}
+  .sheet h3{margin:0 0 4px;font-size:18px;font-weight:800;letter-spacing:-0.02em;}
+  .sheet p{margin:0 0 15px;font-size:13px;color:var(--text2);font-weight:500;line-height:1.5;}
+  .sheet ol{margin:0 0 16px;padding-left:20px;color:var(--text2);font-size:13.5px;line-height:1.6;font-weight:500;}
+  .sheet ol b{color:var(--text);font-weight:700;}
+  .sheet .one{width:100%;padding:15px;border-radius:15px;font-size:15px;font-weight:800;background:var(--gold);color:var(--ctaText);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+  .field{display:flex;align-items:center;background:var(--fill);border:1.5px solid var(--stroke);border-radius:14px;padding:0 14px;margin-bottom:14px;}
+  .field .pfx{font-size:20px;font-weight:700;color:var(--text2);}
+  .field input{flex:1;background:none;border:none;color:var(--text);font-size:22px;font-weight:700;padding:15px 8px;outline:none;font-family:inherit;min-width:0;}
+  .field input[type=date]{font-size:17px;font-weight:600;}
+  .sheet-btns{display:flex;gap:10px;}
+  .sheet-btns button{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;}
+  .btn-cancel{background:var(--fill);color:var(--text);}
+  .btn-save{background:var(--gold);color:var(--ctaText);box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+  .btn-save:active,.btn-cancel:active{filter:brightness(.95);}
+
+  /* Settings sheet rows */
+  .set-label{font-size:13px;font-weight:600;color:var(--text2);margin:16px 4px 8px;}
+  .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--fill);
+    border-radius:14px;padding:14px 15px;margin-bottom:9px;font-size:15px;font-weight:600;}
+  .set-row:active{filter:brightness(.97);}
+  .set-row .chev{color:var(--text3);font-size:15px;}
+  .set-row.danger{color:var(--danger);}
+
+  /* Toast */
+  .toast{position:fixed;left:50%;bottom:calc(26px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+    background:var(--glass2); -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%);
+    color:var(--text);border:1px solid var(--stroke);box-shadow:var(--shadow);
+    font-size:13.5px;font-weight:700;padding:12px 18px;border-radius:14px;opacity:0;transition:.28s;z-index:60;pointer-events:none;max-width:88vw;text-align:center;}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .foot{text-align:center;color:var(--text3);font-size:11px;margin-top:22px;font-weight:500;}
+  /* Balance card */
+  .balance{display:flex;align-items:center;gap:14px;border-radius:22px;padding:17px 20px;margin-top:12px;}
+  .balance .bl{flex:1;min-width:0;}
+  .balance .lbl{font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);}
+  .balance .val{font-size:30px;font-weight:800;letter-spacing:-0.03em;margin-top:2px;color:var(--gold);line-height:1;}
+  .balance .val.settled{color:var(--ok);}
+  .balance .bsub{font-size:12.5px;color:var(--text2);font-weight:500;margin-top:5px;}
+  .balance .settle{flex:none;font-size:13px;font-weight:800;color:var(--ctaText);background:var(--gold);
+    padding:11px 15px;border-radius:13px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+  .balance .settle:active{filter:brightness(.97);transform:scale(.98);}
+  .balance .settle.hide{display:none;}
+
+  /* Status chips */
+  .chip{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:3px 7px;border-radius:7px;white-space:nowrap;}
+  .chip.owed{color:var(--elec);background:color-mix(in srgb,var(--elec) 15%,transparent);border:1px solid color-mix(in srgb,var(--elec) 30%,transparent);}
+  .chip.paid{color:var(--ok);background:color-mix(in srgb,var(--ok) 15%,transparent);border:1px solid color-mix(in srgb,var(--ok) 28%,transparent);}
+  .chip.partial{color:var(--ins);background:color-mix(in srgb,var(--ins) 16%,transparent);border:1px solid color-mix(in srgb,var(--ins) 30%,transparent);}
+
+  /* Electric trend */
+  .trend{border-radius:20px;padding:16px 18px;}
+  .trend .th{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .trend .tt{font-size:15px;font-weight:700;}
+  .trend .add{font-size:12.5px;font-weight:800;color:var(--gold);}
+  .spark{width:100%;height:56px;display:block;margin:6px 0;overflow:visible;}
+  .trend .stats{display:flex;gap:22px;margin-top:10px;}
+  .trend .stat .k{font-size:10.5px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .trend .stat .v{font-size:16px;font-weight:800;margin-top:2px;}
+  .trend .est{margin-top:12px;font-size:13px;color:var(--text2);font-weight:600;padding-top:11px;border-top:1px solid var(--sep);}
+  .trend .est b{color:var(--text);font-weight:800;}
+
+  /* Split controls */
+  .splitrow{display:flex;align-items:center;justify-content:space-between;background:var(--fill);border-radius:12px;
+    padding:13px 15px;margin-bottom:8px;font-size:14.5px;font-weight:600;}
+  .splitrow:active{filter:brightness(.97);}
+  .splitrow .pct{font-size:16px;font-weight:800;color:var(--gold);}
+
+  /* Calendar button */
+  .calbtn{width:100%;margin-top:10px;padding:14px;border-radius:15px;font-size:14px;font-weight:700;color:var(--text);
+    background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--strokeTop);display:flex;align-items:center;justify-content:center;gap:8px;}
+  .calbtn:active{transform:scale(.99);filter:brightness(.98);}
+
+  /* Payment sheet */
+  .pay-actions{display:flex;flex-direction:column;gap:9px;margin-bottom:10px;}
+  .pay-actions button{padding:15px 16px;border-radius:14px;font-size:15px;font-weight:700;text-align:left;
+    background:var(--fill);color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .pay-actions button:active{filter:brightness(.96);}
+  .pay-actions .primary{background:var(--gold);color:var(--ctaText);box-shadow:inset 0 1px 0 rgba(255,255,255,.3);}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+  /* stacking: editor/payment sheets sit above settings & onboarding */
+  #setScrim,#obScrim{z-index:60;}
+  #payScrim,#pastScrim,#periodScrim,#billScrim,#adjScrim,#sumScrim{z-index:70;}
+  #scrim{z-index:80;}
+
+  .bal-actions{display:flex;flex-direction:column;gap:7px;flex:none;}
+  .balance .adjust{font-size:12px;font-weight:800;color:var(--text2);background:var(--fill);padding:8px 12px;border-radius:11px;border:1px solid var(--stroke);}
+  .balance .adjust:active{filter:brightness(.96);}
+  .balance .val.credit{color:var(--ok);}
+  .addrow:active{background:var(--fill);}
+  .addrow .tile{font-weight:700;}
+
+  .mini-toggle{width:46px;height:28px;border-radius:999px;background:var(--fill);border:1px solid var(--stroke);position:relative;transition:background .2s;flex:none;}
+  .mini-toggle.on{background:var(--ok);}
+  .mini-toggle .knob{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .mini-toggle.on .knob{transform:translateX(18px);}
+
+  .chips-pick{display:flex;gap:9px;flex-wrap:wrap;margin:2px 0 16px;}
+  .chips-pick .cc{width:28px;height:28px;border-radius:9px;border:2px solid transparent;}
+  .chips-pick .cc.sel{border-color:var(--text);transform:scale(1.05);}
+
+  .adj-item{display:flex;align-items:center;gap:12px;padding:13px 16px;}
+  .adj-item .ad{flex:1;min-width:0;}
+  .adj-item .an{font-size:14.5px;font-weight:600;}
+  .adj-item .ad2{font-size:12px;color:var(--text2);margin-top:2px;}
+  .adj-item .av{font-size:15px;font-weight:800;flex:none;}
+  .adj-item .av.plus{color:var(--elec);} .adj-item .av.minus{color:var(--ok);}
+  .adj-item .del{color:var(--text3);font-size:15px;padding:6px;margin:-6px;}
+
+  .sum-big{display:flex;gap:10px;margin-bottom:14px;}
+  .sum-big .card{flex:1;background:var(--fill);border-radius:14px;padding:14px;}
+  .sum-big .card .k{font-size:10.5px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .sum-big .card .v{font-size:19px;font-weight:800;margin-top:4px;letter-spacing:-0.02em;}
+  .sum-row{display:flex;justify-content:space-between;align-items:center;padding:11px 2px;border-bottom:1px solid var(--sep);font-size:14.5px;}
+  .sum-row:last-child{border-bottom:none;}
+  .sum-row .k{color:var(--text2);font-weight:600;display:flex;align-items:center;gap:8px;}
+  .sum-row .v{font-weight:800;}
+  .sum-empty{text-align:center;color:var(--text2);font-size:13.5px;padding:20px 0;font-weight:500;}
+</style>
+</head>
+<body>
+<div id="ambient"></div>
+
+<header>
+  <div class="brand">
+    <h1>Utilities</h1>
+    <span class="cyc" id="cycleLabel">—</span>
+  </div>
+  <div class="hbtns">
+    <button class="icobtn" id="btnTheme" title="Appearance">☾</button>
+    <button class="icobtn" id="btnGear" title="Settings">⚙</button>
+  </div>
+</header>
+
+<!-- BACKUP STATUS -->
+<button class="bkstrip glass" id="bkstrip">
+  <span class="bkdot" id="bkdot"></span>
+  <span class="bktext" id="bktext">Set up iCloud backup</span>
+  <span class="bkcta" id="bkcta">Back up</span>
+</button>
+
+<!-- HERO -->
+<div class="hero glass">
+  <div class="eyebrow">
+    <span>You charge</span>
+    <span class="who" id="whoWrap"><u id="whoName">roommate</u></span>
+  </div>
+  <div class="bignum tnum" id="charge">$0.00</div>
+  <div class="sub" id="chargeSub">Half of <b class="tnum" id="total">$0.00</b> total this cycle</div>
+  <div id="pendingWrap"></div>
+
+  <div class="compbar" id="compbar"></div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<!-- BALANCE -->
+<div class="balance glass" id="balanceCard">
+  <div class="bl">
+    <div class="lbl" id="balLbl">Owes you</div>
+    <div class="val tnum" id="balVal">$0.00</div>
+    <div class="bsub" id="balSub">All settled</div>
+  </div>
+  <div class="bal-actions">
+    <button class="settle" id="settleAll">Settle up</button>
+    <button class="adjust" id="adjustBtn">± Adjust</button>
+  </div>
+</div>
+
+<!-- UTILITIES -->
+<div class="sec">
+  <div class="sec-h">This cycle · tap an amount to edit</div>
+  <div id="rows" class="group icons glass"></div>
+  <button class="cta" id="btnLog">Log electric payment → next cycle</button>
+  <button class="calbtn" id="addPastBtn2" style="margin-top:8px;font-size:13px;">＋ Add a past electric bill</button>
+</div>
+
+<!-- ELECTRIC TREND -->
+<div class="sec" id="trendSec" style="display:none">
+  <div class="sec-h">Electric trend</div>
+  <div class="trend glass">
+    <div class="th">
+      <div class="tt">Past electric bills</div>
+      <button class="add" id="addPastBtn">＋ Add past bill</button>
+    </div>
+    <svg class="spark" id="spark" viewBox="0 0 300 56" preserveAspectRatio="none"></svg>
+    <div class="stats" id="trendStats"></div>
+    <div class="est" id="trendEst"></div>
+  </div>
+</div>
+
+<!-- REMINDERS -->
+<div class="sec">
+  <div class="sec-h">Coming up</div>
+  <div id="reminders" class="group icons glass"></div>
+  <button class="calbtn" id="calBtn">🗓️ Add due dates to Calendar (offline alerts)</button>
+</div>
+
+<!-- HISTORY -->
+<div class="sec">
+  <div class="sec-h">History · tap a cycle to record payment</div>
+  <div class="group glass" id="history"></div>
+</div>
+
+<!-- ADJUSTMENTS -->
+<div class="sec" id="adjSec" style="display:none">
+  <div class="sec-h">Adjustments · credits & extra charges</div>
+  <div class="group glass" id="adjList"></div>
+</div>
+
+<!-- SUMMARY -->
+<div class="sec">
+  <button class="calbtn" id="summaryBtn">📊 Year &amp; all-time summary</button>
+</div>
+
+<div class="install glass" id="install">
+  <span class="x" id="installX">✕</span>
+  <b>Make it an app:</b> tap the Share button in Safari, then <b>Add to Home Screen</b>. It runs fully offline from there.
+</div>
+
+<div class="foot">All data stays on this device · offline</div>
+
+<!-- Editor sheet -->
+<div class="scrim" id="scrim">
+  <div class="sheet">
+    <h3 id="edTitle">Edit</h3>
+    <p id="edHint"></p>
+    <div class="field" id="edField">
+      <span class="pfx" id="edPfx">$</span>
+      <input id="edInput" type="text" inputmode="decimal" autocomplete="off">
+    </div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="edCancel">Cancel</button>
+      <button class="btn-save" id="edSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Payment sheet -->
+<div class="scrim" id="payScrim">
+  <div class="sheet">
+    <h3 id="payTitle">Record payment</h3>
+    <p id="payHint"></p>
+    <div class="pay-actions">
+      <button class="primary" id="payFull">Mark paid in full <span id="payFullAmt"></span></button>
+      <button id="payPartial">Enter partial amount <span>›</span></button>
+      <button id="payUnmark">Mark as unpaid <span></span></button>
+    </div>
+    <button class="btn-cancel" id="payClose" style="width:100%;padding:14px;border-radius:14px;font-weight:700;">Close</button>
+  </div>
+</div>
+
+<!-- Add past bill sheet -->
+<div class="scrim" id="pastScrim">
+  <div class="sheet">
+    <h3>Add past electric bill</h3>
+    <p>Backfill an earlier bill to build your trend. Marked as already paid.</p>
+    <div class="field"><span class="pfx">$</span><input id="pastAmt" type="text" inputmode="decimal" placeholder="Amount" autocomplete="off"></div>
+    <div class="set-label" style="margin:2px 4px 8px">Billing period — set two of the three</div>
+    <div class="field"><span class="pfx" style="font-size:13px;width:42px">From</span><input id="pastStart" type="date"></div>
+    <div class="field"><span class="pfx" style="font-size:13px;width:42px">To</span><input id="pastEnd" type="date"></div>
+    <div class="field"><span class="pfx" style="font-size:13px;width:42px">Days</span><input id="pastDays" type="number" inputmode="numeric" placeholder="e.g. 29"></div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="pastCancel">Cancel</button>
+      <button class="btn-save" id="pastSave">Add bill</button>
+    </div>
+  </div>
+</div>
+
+<!-- Billing period editor -->
+<div class="scrim" id="periodScrim">
+  <div class="sheet">
+    <h3>Electric billing period</h3>
+    <p>Pick dates, or enter a start (or end) date plus the number of days — the rest fills in. The next period starts where this one ends.</p>
+    <div class="field"><span class="pfx" style="font-size:13px;width:42px">From</span><input id="perStart" type="date"></div>
+    <div class="field"><span class="pfx" style="font-size:13px;width:42px">To</span><input id="perEnd" type="date"></div>
+    <div class="field"><span class="pfx" style="font-size:13px;width:42px">Days</span><input id="perDays" type="number" inputmode="numeric" placeholder="e.g. 29"></div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="perCancel">Cancel</button>
+      <button class="btn-save" id="perSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- iCloud onboarding sheet -->
+<div class="scrim" id="obScrim">
+  <div class="sheet">
+    <h3>Back up to iCloud Drive</h3>
+    <p>Your data lives on this device. Save a backup file to iCloud so it survives and reaches your other Apple devices.</p>
+    <ol>
+      <li>Tap <b>Back up</b> — the share sheet opens.</li>
+      <li>Choose <b>Save to Files</b> → <b>iCloud Drive</b>.</li>
+      <li>Keep the name <b>Utilities-backup.json</b> (tap Replace when re-saving).</li>
+      <li>On another device: open Utilities, tap <b>☁︎↓ Restore</b>, pick that file.</li>
+    </ol>
+    <button class="one" id="obGo">Back up now</button>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="scrim" id="setScrim">
+  <div class="sheet">
+    <h3>Settings</h3>
+    <div class="set-label">Appearance</div>
+    <div class="seg" id="themeSeg">
+      <span class="thumb" id="themeThumb"></span>
+      <button data-theme-val="auto">Auto</button>
+      <button data-theme-val="light">Light</button>
+      <button data-theme-val="dark">Dark</button>
+    </div>
+    <div class="set-label">Split — their share</div>
+    <div class="seg" id="splitSeg">
+      <span class="thumb" id="splitThumb"></span>
+      <button data-split-mode="flat">Flat</button>
+      <button data-split-mode="perUtility">Per-utility</button>
+    </div>
+    <div id="splitFlat">
+      <div class="splitrow" id="splitFlatRow">Roommate pays <span class="pct" id="flatPct">50%</span></div>
+    </div>
+    <div id="splitPer" style="display:none"></div>
+
+    <div class="set-label">Reminders</div>
+    <div class="set-row" id="setCal">Add due dates to Calendar <span class="chev">🗓️</span></div>
+
+    <div class="set-label">Data</div>
+    <div class="set-row" id="setBackup">Back up to iCloud <span class="chev">☁︎↑</span></div>
+    <div class="set-row" id="setRestore">Restore from iCloud <span class="chev">☁︎↓</span></div>
+    <div class="set-row" id="setWho">Who you charge <span class="chev" id="setWhoVal">roommate ›</span></div>
+    <div class="set-row danger" id="setReset">Reset everything <span class="chev">⟲</span></div>
+    <button class="one" id="setDone" style="margin-top:16px;background:var(--fill);color:var(--text);box-shadow:none;">Done</button>
+  </div>
+</div>
+
+<!-- Bill editor sheet -->
+<div class="scrim" id="billScrim">
+  <div class="sheet">
+    <h3 id="billTitle">Bill</h3>
+    <div class="field"><input id="billName" type="text" placeholder="Name (e.g. Water)" autocomplete="off"></div>
+    <div class="field"><span class="pfx">$</span><input id="billAmt" type="text" inputmode="decimal" placeholder="Amount"></div>
+    <div class="set-row" style="margin-bottom:9px"><span>Auto-pays</span>
+      <button class="mini-toggle" id="billAuto" role="switch"><span class="knob"></span></button></div>
+    <div class="field"><span class="pfx" style="font-size:13px;width:92px" id="billPayLbl">Pays on the</span><input id="billPayDay" type="number" inputmode="numeric" min="1" max="31" placeholder="day"></div>
+    <div class="field"><span class="pfx" style="font-size:13px;width:92px">Due day</span><input id="billDueDay" type="number" inputmode="numeric" min="1" max="31" placeholder="optional"></div>
+    <div class="chips-pick" id="billColors"></div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="billDelete" style="color:var(--danger)">Delete</button>
+      <button class="btn-save" id="billSave">Save</button>
+    </div>
+    <button class="btn-cancel" id="billCancel" style="width:100%;padding:13px;border-radius:14px;font-weight:700;margin-top:9px">Cancel</button>
+  </div>
+</div>
+
+<!-- Adjustment sheet -->
+<div class="scrim" id="adjScrim">
+  <div class="sheet">
+    <h3>Adjust the balance</h3>
+    <p>Add an extra charge, or give a credit that draws down against future bills.</p>
+    <div class="seg" id="adjSeg" style="margin-bottom:14px">
+      <span class="thumb" id="adjThumb"></span>
+      <button data-adj="charge">Charge (+)</button>
+      <button data-adj="credit">Credit (−)</button>
+    </div>
+    <div class="field"><span class="pfx">$</span><input id="adjAmt" type="text" inputmode="decimal" placeholder="Amount"></div>
+    <div class="field"><input id="adjNote" type="text" placeholder="Note (optional)" autocomplete="off"></div>
+    <div class="sheet-btns">
+      <button class="btn-cancel" id="adjCancel">Cancel</button>
+      <button class="btn-save" id="adjSave">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Summary sheet -->
+<div class="scrim" id="sumScrim">
+  <div class="sheet">
+    <h3>Summary</h3>
+    <div class="seg" id="sumSeg" style="margin-bottom:14px">
+      <span class="thumb" id="sumThumb"></span>
+      <button data-sum="year">This year</button>
+      <button data-sum="all">All time</button>
+    </div>
+    <div id="sumBody"></div>
+    <button class="one" id="sumDone" style="margin-top:16px;background:var(--fill);color:var(--text);box-shadow:none">Done</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<input type="file" id="fileInput" accept="application/json,.json" style="display:none">
+
+<script>
+"use strict";
+const KEY="split_utils_v1";
+const $=s=>document.querySelector(s);
+const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n)||0);
+const mdShort=d=>d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const parseISO=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+function today(){const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate());}
+function daysBetween(a,b){return Math.round((b-a)/86400000);}
+
+// ---- default state ----
+function defaultState(){
+  return {
+    who:"roommate",
+    electric:{ amount:null, name:"Electric", glyph:"⚡", periodStart:"2026-06-09", nextDate:"2026-07-09", cycleDays:30 }, // variable anchor
+    bills:[
+      { id:"internet",  name:"Internet",  glyph:"🌐", color:"var(--net)", amount:90,   autopay:true, payDay:12, dueDay:13 },
+      { id:"insurance", name:"Insurance", glyph:"🛡️", color:"var(--ins)", amount:15.95, autopay:true, payDay:24, dueDay:null }
+    ],
+    adjustments:[],  // {id, date, amount (+ = extra charge, - = credit), note}
+    history:[],
+    split:{ mode:"flat", flat:50, per:{} },  // per: { utilId: percent }
+    meta:{ lastBackup:null, backupHash:null, onboarded:false, theme:"auto" }
+  };
+}
+const BILL_COLORS=["var(--net)","var(--ins)","#F2A65A","#E8785B","#7BC96F","#5AA9E6","#E6A5D8","#C0A35E"];
+
+// migrate older saves (internet/insurance objects, old split keys) into the new model
+function migrate(st){
+  if(!st.bills){
+    st.bills=[];
+    if(st.internet) st.bills.push({id:"internet",name:"Internet",glyph:"🌐",color:"var(--net)",amount:st.internet.amount,autopay:true,payDay:st.internet.payDay,dueDay:st.internet.dueDay});
+    if(st.insurance) st.bills.push({id:"insurance",name:"Insurance",glyph:"🛡️",color:"var(--ins)",amount:st.insurance.amount,autopay:true,payDay:st.insurance.payDay,dueDay:null});
+  }
+  delete st.internet; delete st.insurance;
+  if(!st.electric.name) st.electric.name="Electric";
+  if(!st.electric.glyph) st.electric.glyph="⚡";
+  if(!st.adjustments) st.adjustments=[];
+  if(!st.split) st.split={mode:"flat",flat:50,per:{}};
+  if(!st.split.per){ st.split.per={}; ["electric","internet","insurance"].forEach(k=>{ if(typeof st.split[k]==="number") st.split.per[k]=st.split[k]; }); }
+  return st;
+}
+
+// unified list of all utilities (anchor + monthly bills)
+function allUtils(){
+  const e=S.electric||{};
+  const anchor={id:"electric",name:e.name||"Electric",glyph:e.glyph||"⚡",color:"var(--elec)",amount:e.amount,kind:"variable"};
+  const bills=(S.bills||[]).map(b=>({id:b.id,name:b.name,glyph:b.glyph,color:b.color||"var(--net)",amount:b.amount,autopay:b.autopay!==false,payDay:b.payDay,dueDay:b.dueDay,kind:"monthly"}));
+  return [anchor,...bills];
+}
+function billById(id){ return (S.bills||[]).find(b=>b.id===id); }
+
+// split: their share
+function splitCfg(){ const sp=S.split||{}; return {mode:sp.mode||"flat", flat:sp.flat!=null?sp.flat:50, per:sp.per||{}}; }
+function perPct(id){ const sp=splitCfg(); return sp.per[id]!=null?sp.per[id]:50; }
+function chargeForList(list){
+  const sp=splitCfg();
+  if(sp.mode==="perUtility") return list.reduce((s,u)=>s+(Number(u.amount)||0)*perPct(u.id)/100,0);
+  const total=list.reduce((s,u)=>s+(Number(u.amount)||0),0);
+  return total*sp.flat/100;
+}
+
+// stored cycle entry helpers
+function entryCharge(en){ return typeof en.charge==="number"?en.charge:0; }
+function entryPaid(en){ return Number(en.paidAmount)||0; }
+function outstanding(en){ return Math.max(0, entryCharge(en)-entryPaid(en)); }
+function entryBreakdown(e){
+  if(Array.isArray(e.breakdown)) return e.breakdown;
+  const b=[{name:"Electric",glyph:"⚡",amount:e.electric||0}];
+  if(e.internet!=null) b.push({name:"Internet",glyph:"🌐",amount:e.internet});
+  if(e.insurance!=null) b.push({name:"Insurance",glyph:"🛡️",amount:e.insurance});
+  return b;
+}
+// adjustments total (+ owed, - credit)
+function adjustmentsTotal(){ return (S.adjustments||[]).reduce((s,a)=>s+(Number(a.amount)||0),0); }
+
+// stable hash of the data that matters (ignores meta) — lets us know if there are unsaved-to-iCloud changes
+function dataHash(st){
+  const {meta,...core}=st;
+  const s=JSON.stringify(core);
+  let h=5381; for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))|0;}
+  return String(h>>>0);
+}
+
+/* ---- tiny IndexedDB mirror (more durable than localStorage) ---- */
+let _db=null;
+function idb(){
+  return new Promise(res=>{
+    if(_db)return res(_db);
+    try{
+      const r=indexedDB.open("splitDB",1);
+      r.onupgradeneeded=()=>r.result.createObjectStore("kv");
+      r.onsuccess=()=>{_db=r.result;res(_db);};
+      r.onerror=()=>res(null);
+    }catch(e){res(null);}
+  });
+}
+async function idbSet(k,v){const db=await idb();if(!db)return;try{const t=db.transaction("kv","readwrite");t.objectStore("kv").put(v,k);}catch(e){}}
+async function idbGet(k){const db=await idb();if(!db)return null;return new Promise(r=>{try{const rq=db.transaction("kv","readonly").objectStore("kv").get(k);rq.onsuccess=()=>r(rq.result??null);rq.onerror=()=>r(null);}catch(e){r(null);}});}
+
+let S=loadSync();
+function loadSync(){
+  try{const r=localStorage.getItem(KEY);if(r)return migrate(Object.assign(defaultState(),JSON.parse(r)));}catch(e){}
+  return defaultState();
+}
+// after first paint, reconcile with IndexedDB in case localStorage was evicted by iOS
+async function reconcileFromIDB(){
+  try{
+    const backup=await idbGet(KEY);
+    if(!backup)return;
+    const local=localStorage.getItem(KEY);
+    // adopt IDB copy only if localStorage is missing/empty but IDB has real history
+    if(!local && backup && (backup.history?.length || backup.meta?.lastBackup)){
+      S=migrate(Object.assign(defaultState(),backup)); save(); render();
+      toast("Recovered your data from device backup");
+    }
+  }catch(e){}
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast("Storage blocked — open in Safari");}
+  idbSet(KEY,S); // durable mirror
+}
+
+// ---- date helpers ----
+function nextDayOfMonth(day){
+  const t=today(); let d=new Date(t.getFullYear(),t.getMonth(),day);
+  if(d<t) d=new Date(t.getFullYear(),t.getMonth()+1,day);
+  return d;
+}
+function currentCycleLabel(){
+  return parseISO(S.electric.nextDate).toLocaleDateString("en-US",{month:"long",year:"numeric"});
+}
+function whenText(d){
+  const n=daysBetween(today(),d);
+  if(n<0) return {t:`${-n}d overdue`,c:"now"};
+  if(n===0) return {t:"today",c:"now"};
+  if(n===1) return {t:"tomorrow",c:"soon"};
+  return {t:`in ${n} days`,c:n<=5?"soon":"later"};
+}
+
+// ---- totals ----
+// electric billing-period helpers
+function addDays(d,n){const x=new Date(d.getTime()); x.setDate(x.getDate()+n); return x;}
+function elecPeriodStart(){ return S.electric.periodStart || iso(addDays(parseISO(S.electric.nextDate), -(S.electric.cycleDays||30))); }
+function fmtRange(aISO,bISO){ const a=parseISO(aISO), b=parseISO(bISO);
+  const sameYear=a.getFullYear()===b.getFullYear();
+  const opt=sameYear?{month:"short",day:"numeric"}:{month:"short",day:"numeric",year:"2-digit"};
+  return `${a.toLocaleDateString("en-US",opt)} – ${b.toLocaleDateString("en-US",opt)}`;
+}
+function entryPeriod(e){ return (e.periodStart&&e.periodEnd) ? fmtRange(e.periodStart,e.periodEnd) : null; }
+
+function totals(){
+  const list=allUtils();
+  const total=list.reduce((s,u)=>s+(Number(u.amount)||0),0);
+  return {list,total,charge:chargeForList(list),electricPending:S.electric.amount==null};
+}
+
+// ---- render ----
+function render(){
+  const T=totals();
+  const sp=splitCfg();
+  $("#cycleLabel").textContent=currentCycleLabel()+" cycle";
+  $("#whoName").textContent=S.who||"roommate";
+  $("#charge").textContent=money(T.charge);
+  const shareTxt = sp.mode==="perUtility" ? "Their share of" : (sp.flat===50?"Half of":sp.flat+"% of");
+  $("#chargeSub").innerHTML=`${shareTxt} <b class="tnum">${money(T.total)}</b> total this cycle`;
+
+  $("#pendingWrap").innerHTML = T.electricPending
+    ? `<span class="pending">${S.electric.glyph||"⚡"} ${S.electric.name||"Electric"} not entered yet — total isn't final</span>` : "";
+
+  renderBalance();
+  renderTrend();
+
+  // composition + legend (dynamic)
+  const denom=T.total||1;
+  $("#compbar").innerHTML=T.list.map(u=>`<span style="width:${(Number(u.amount)||0)/denom*100}%;background:${u.color}"></span>`).join("");
+  $("#legend").innerHTML=T.list.map(u=>`<div class="li"><span class="dot" style="background:${u.color}"></span>${u.name}</div>`).join("");
+
+  // rows (dynamic)
+  $("#rows").innerHTML=T.list.map(u=>{
+    let meta,badge="";
+    if(u.kind==="variable"){
+      meta=`Manual · <span class="tap" data-edit="eperiod">${fmtRange(elecPeriodStart(),S.electric.nextDate)}</span> · varies`;
+    }else{
+      badge=u.autopay?"Autopay":"";
+      meta=(u.autopay?`Auto-pays the ${ord(u.payDay)}`:`Due the ${ord(u.payDay)}`)+(u.dueDay?` · due the ${ord(u.dueDay)}`:"");
+    }
+    return `<div class="row">
+      <div class="tile" data-util="${u.id}" style="background:color-mix(in srgb,${u.color} 18%,transparent);color:${u.color}">${u.glyph}</div>
+      <div class="info" data-util="${u.id}">
+        <div class="name">${u.name} ${badge?`<span class="badge">${badge}</span>`:""}</div>
+        <div class="meta">${meta}</div>
+      </div>
+      <div class="amt ${u.amount==null?"empty":""}" data-edit="amt" data-k="${u.id}">
+        ${u.amount==null?"Add":money(u.amount)}<span class="pen">✎</span>
+      </div>
+    </div>`;
+  }).join("")+`<div class="row addrow" id="addBillRow">
+      <div class="tile" style="background:var(--fill);color:var(--text2)">＋</div>
+      <div class="info"><div class="name" style="color:var(--text2);font-weight:600">Add a bill</div></div>
+    </div>`;
+
+  $("#btnLog").disabled=T.electricPending;
+  $("#btnLog").textContent=T.electricPending?`Enter ${(S.electric.name||"electric").toLowerCase()} amount to log`:`Log ${(S.electric.name||"electric").toLowerCase()} payment → next cycle`;
+
+  renderReminders();
+  renderHistory();
+  renderAdjustments();
+  updateBackupStatus();
+}
+function ord(n){const s=["th","st","nd","rd"],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+function renderReminders(){
+  const items=[];
+  items.push({ic:S.electric.glyph||"⚡",r1:S.electric.amount==null?`Enter ${S.electric.name||"electric"} bill`:`${S.electric.name||"Electric"} logged for this cycle`,
+    r2:`${fmtRange(elecPeriodStart(),S.electric.nextDate)}${S.electric.amount==null?" · amount varies":" · "+money(S.electric.amount)}`,date:parseISO(S.electric.nextDate)});
+  (S.bills||[]).forEach(b=>{
+    items.push({ic:b.glyph,r1:`${b.name} ${b.autopay!==false?"auto-pays":"due"} ${money(b.amount)}`,
+      r2:(b.dueDay?`Due the ${ord(b.dueDay)}`:(b.autopay!==false?"Automatic":"Manual")),date:nextDayOfMonth(b.payDay)});
+  });
+  items.sort((a,b)=>a.date-b.date);
+  $("#reminders").innerHTML=items.map(it=>{
+    const w=whenText(it.date);
+    return `<div class="rem">
+      <div class="ic">${it.ic}</div>
+      <div class="rt"><div class="r1">${it.r1}</div><div class="r2">${it.r2} · ${mdShort(it.date)}</div></div>
+      <div class="when ${w.c}">${w.t}</div>
+    </div>`;
+  }).join("");
+}
+
+function renderHistory(){
+  const h=$("#history");
+  if(!S.history.length){
+    h.innerHTML=`<div class="empty-state">No cycles logged yet.<br>When you pay the electric bill, tap <b>Log electric payment</b> to save this month here.</div>`;
+    return;
+  }
+  h.innerHTML=S.history.slice().reverse().map(e=>{
+    const ch=entryCharge(e), pd=entryPaid(e), out=outstanding(e);
+    let chip;
+    if(out<=0.005) chip=`<span class="chip paid">Paid</span>`;
+    else if(pd>0)  chip=`<span class="chip partial">${money(pd)} paid</span>`;
+    else           chip=`<span class="chip owed">Owed</span>`;
+    const per=entryPeriod(e);
+    const title=per?per:parseISO(e.date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+    return `
+    <div class="hitem" data-pay="${e.id}">
+      <div class="hd">
+        <div class="hdate">${title} ${chip}</div>
+        <div class="hbreak">${entryBreakdown(e).map(x=>`${x.glyph} ${money(x.amount)}`).join(" · ")}</div>
+      </div>
+      <div class="hcharge">
+        <div class="c tnum">${money(ch)}</div>
+        <div class="t tnum">${out>0.005?"owes "+money(out):"settled"}</div>
+      </div>
+      <button class="del" data-del="${e.id}">✕</button>
+    </div>`;}).join("");
+}
+
+// ---- running balance (cycles + manual adjustments) ----
+function renderBalance(){
+  const cyclesOwed=S.history.reduce((s,e)=>s+outstanding(e),0);
+  const adj=adjustmentsTotal();
+  const net=cyclesOwed+adj;
+  const unpaid=S.history.filter(e=>outstanding(e)>0.005).length;
+  const val=$("#balVal"), sub=$("#balSub"), lbl=$("#balLbl"), btn=$("#settleAll");
+  const who=S.who||"roommate";
+  val.classList.remove("settled","credit");
+  if(Math.abs(net)<=0.005){
+    lbl.textContent=who+" owes you"; val.textContent="$0.00"; val.classList.add("settled");
+    sub.textContent=S.history.length?"All settled up 🎉":"No cycles logged yet"; btn.classList.add("hide");
+  }else if(net<0){
+    lbl.textContent=who+" has credit"; val.textContent=money(-net); val.classList.add("credit");
+    sub.textContent="Applies against upcoming bills"; btn.classList.add("hide");
+  }else{
+    lbl.textContent=who+" owes you"; val.textContent=money(net);
+    const bits=[]; if(unpaid) bits.push(`${unpaid} unpaid cycle${unpaid>1?"s":""}`);
+    if(Math.abs(adj)>0.005) bits.push(`${adj>0?"+":"−"}${money(Math.abs(adj))} adjustments`);
+    sub.textContent=bits.join(" · ")||"Outstanding"; btn.classList.remove("hide");
+  }
+}
+$("#settleAll").onclick=()=>{
+  if(!confirm("Mark all outstanding cycles as paid in full? (Adjustments stay — clear them individually.)"))return;
+  const t=iso(today());
+  S.history.forEach(e=>{ if(outstanding(e)>0.005){ e.paidAmount=entryCharge(e); e.paid=true; e.paidDate=t; }});
+  save(); render(); toast("Cycles settled");
+};
+
+// ---- adjustments (credits / extra charges) ----
+function renderAdjustments(){
+  const sec=$("#adjSec"), list=S.adjustments||[];
+  if(!list.length){ sec.style.display="none"; return; }
+  sec.style.display="";
+  $("#adjList").innerHTML=list.slice().reverse().map(a=>{
+    const amt=Number(a.amount)||0, credit=amt<0;
+    return `<div class="adj-item">
+      <div class="ad">
+        <div class="an">${a.note?a.note:(credit?"Credit":"Extra charge")}</div>
+        <div class="ad2">${parseISO(a.date).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})} · ${credit?"credit":"charge"}</div>
+      </div>
+      <div class="av ${credit?"minus":"plus"}">${credit?"−":"+"}${money(Math.abs(amt))}</div>
+      <button class="del" data-adjdel="${a.id}">✕</button>
+    </div>`;
+  }).join("");
+}
+$("#adjList").addEventListener("click",e=>{ const b=e.target.closest("[data-adjdel]"); if(!b)return;
+  const id=Number(b.dataset.adjdel); S.adjustments=S.adjustments.filter(x=>x.id!==id); save(); render(); });
+
+let adjKind="charge";
+function setAdjKind(k){ adjKind=k;
+  const btns=[...document.querySelectorAll("#adjSeg [data-adj]")]; let idx=0;
+  btns.forEach((b,i)=>{ const on=b.dataset.adj===k; b.classList.toggle("sel",on); if(on)idx=i; });
+  const th=$("#adjThumb"); th.style.width="calc((100% - 6px)/2)"; th.style.transform=`translateX(${idx*100}%)`;
+}
+document.querySelectorAll("#adjSeg [data-adj]").forEach(b=>b.onclick=()=>setAdjKind(b.dataset.adj));
+$("#adjustBtn").onclick=()=>{ $("#adjAmt").value=""; $("#adjNote").value=""; setAdjKind("charge"); $("#adjScrim").classList.add("on"); };
+$("#adjCancel").onclick=()=>$("#adjScrim").classList.remove("on");
+$("#adjScrim").addEventListener("click",e=>{if(e.target===$("#adjScrim"))$("#adjScrim").classList.remove("on");});
+$("#adjSave").onclick=()=>{
+  let v=parseFloat(String($("#adjAmt").value).replace(/[^0-9.]/g,""));
+  if(isNaN(v)||v<=0){ toast("Enter an amount"); return; }
+  const amount=adjKind==="credit"?-v:v;
+  S.adjustments.push({id:Date.now(),date:iso(today()),amount,note:($("#adjNote").value||"").trim()});
+  $("#adjScrim").classList.remove("on"); save(); render();
+  toast(adjKind==="credit"?`${money(v)} credit added`:`${money(v)} charge added`);
+};
+
+// ---- electric trend + estimate ----
+function electricSeries(){
+  const key=e=>parseISO(e.periodEnd||e.date);
+  return S.history.filter(e=>Number(e.electric)>0)
+    .sort((a,b)=>key(a)-key(b))
+    .map(e=>({d:key(e),v:Number(e.electric)}));
+}
+function estimateNextElectric(){
+  const s=electricSeries().map(x=>x.v);
+  if(!s.length) return null;
+  const last3=s.slice(-3);
+  return last3.reduce((a,b)=>a+b,0)/last3.length;
+}
+function renderTrend(){
+  const sec=$("#trendSec"), series=electricSeries();
+  if(series.length<1){ sec.style.display="none"; return; }
+  sec.style.display="";
+  const vals=series.map(x=>x.v);
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length, mx=Math.max(...vals), mn=Math.min(...vals);
+  $("#trendStats").innerHTML=`
+    <div class="stat"><div class="k">Avg</div><div class="v tnum">${money(avg)}</div></div>
+    <div class="stat"><div class="k">High</div><div class="v tnum">${money(mx)}</div></div>
+    <div class="stat"><div class="k">Low</div><div class="v tnum">${money(mn)}</div></div>`;
+  const est=estimateNextElectric();
+  $("#trendEst").innerHTML = series.length>=2
+    ? `Estimated next bill <b class="tnum">≈ ${money(est)}</b> <span style="color:var(--text3)">(avg of last ${Math.min(3,vals.length)})</span>`
+    : `Add another bill to estimate your next one.`;
+  // sparkline (bars)
+  const W=300,H=56,n=vals.length,gap=n>1?4:0,bw=(W-gap*(n-1))/n;
+  const top=mx*1.08||1;
+  const bars=vals.map((v,idx)=>{
+    const bh=Math.max(3,(v/top)*H), x=idx*(bw+gap), y=H-bh, last=idx===n-1;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2"
+      fill="var(--elec)" opacity="${last?1:0.5}"></rect>`;
+  }).join("");
+  $("#spark").innerHTML=bars;
+}
+
+// ---- editor sheet ----
+let editCtx=null;
+function openEditor(cfg){
+  editCtx=cfg;
+  $("#edTitle").textContent=cfg.title;
+  $("#edHint").textContent=cfg.hint||"";
+  const inp=$("#edInput"), pfx=$("#edPfx");
+  if(cfg.type==="date"){pfx.style.display="none";inp.type="date";inp.inputMode="none";inp.value=cfg.value||"";}
+  else if(cfg.type==="text"){pfx.style.display="none";inp.type="text";inp.inputMode="text";inp.value=cfg.value||"";}
+  else{pfx.style.display="";inp.type="text";inp.inputMode="decimal";inp.value=cfg.value!=null?cfg.value:"";}
+  $("#scrim").classList.add("on");
+  setTimeout(()=>{inp.focus();if(cfg.type==="number"||cfg.type==="text")inp.select();},60);
+}
+function closeEditor(){$("#scrim").classList.remove("on");editCtx=null;}
+$("#edCancel").onclick=closeEditor;
+$("#scrim").addEventListener("click",e=>{if(e.target===$("#scrim"))closeEditor();});
+$("#edSave").onclick=()=>{
+  if(!editCtx)return;
+  const raw=$("#edInput").value;
+  editCtx.onSave(raw);
+  closeEditor(); save(); render();
+};
+
+// amount / period / util edit / add-bill taps
+$("#rows").addEventListener("click",e=>{
+  const amt=e.target.closest('[data-edit="amt"]');
+  const per=e.target.closest('[data-edit="eperiod"]');
+  const util=e.target.closest('[data-util]');
+  const add=e.target.closest('#addBillRow');
+  if(amt){
+    const k=amt.dataset.k;
+    const u=allUtils().find(x=>x.id===k)||{};
+    openEditor({title:`${u.name||"Bill"} amount`,hint:"Enter the bill amount for this cycle.",type:"number",
+      value:u.amount!=null?u.amount:"",onSave:v=>{const n=parseFloat(String(v).replace(/[^0-9.]/g,""));const val=isNaN(n)?null:n;
+        if(k==="electric") S.electric.amount=val; else { const b=billById(k); if(b) b.amount=(val==null?0:val); }}});
+  } else if(per){
+    openPeriod();
+  } else if(add){
+    openBill(null);
+  } else if(util){
+    const id=util.dataset.util;
+    if(id==="electric"){
+      openEditor({title:"Rename this bill",hint:"The variable bill you log each cycle.",type:"text",value:S.electric.name||"Electric",
+        onSave:v=>{ S.electric.name=(v||"").trim()||"Electric"; }});
+    } else openBill(id);
+  }
+});
+$("#whoName").addEventListener("click",()=>{
+  openEditor({title:"Who you charge",hint:"Name shown on the split.",type:"text",value:S.who,
+    onSave:v=>{S.who=(v||"").trim()||"roommate";}});
+});
+
+// ---- bill editor ----
+let billId=null;
+function openBill(id){
+  billId=id; const b=id?billById(id):null;
+  $("#billTitle").textContent=b?`Edit ${b.name}`:"Add a bill";
+  $("#billName").value=b?b.name:"";
+  $("#billAmt").value=b?(b.amount??""):"";
+  const autopay=b?b.autopay!==false:true;
+  $("#billAuto").classList.toggle("on",autopay);
+  $("#billPayLbl").textContent=autopay?"Pays on the":"Due on the";
+  $("#billPayDay").value=b?b.payDay:"";
+  $("#billDueDay").value=(b&&b.dueDay)?b.dueDay:"";
+  const chosen=b?b.color:BILL_COLORS[(S.bills||[]).length%BILL_COLORS.length];
+  $("#billColors").innerHTML=BILL_COLORS.map(c=>`<button class="cc ${c===chosen?"sel":""}" data-color="${c}" style="background:${c}"></button>`).join("");
+  $("#billDelete").style.display=b?"":"none";
+  $("#billScrim").classList.add("on");
+}
+$("#billAuto").onclick=()=>{ const on=!$("#billAuto").classList.contains("on"); $("#billAuto").classList.toggle("on",on);
+  $("#billPayLbl").textContent=on?"Pays on the":"Due on the"; };
+$("#billColors").addEventListener("click",e=>{ const c=e.target.closest("[data-color]"); if(!c)return;
+  $("#billColors").querySelectorAll(".cc").forEach(x=>x.classList.remove("sel")); c.classList.add("sel"); });
+$("#billCancel").onclick=()=>$("#billScrim").classList.remove("on");
+$("#billScrim").addEventListener("click",e=>{if(e.target===$("#billScrim"))$("#billScrim").classList.remove("on");});
+$("#billDelete").onclick=()=>{ if(!billId)return; if(!confirm("Delete this bill?"))return;
+  S.bills=S.bills.filter(b=>b.id!==billId); $("#billScrim").classList.remove("on"); save(); render(); toast("Bill deleted"); };
+$("#billSave").onclick=()=>{
+  const name=($("#billName").value||"").trim(); if(!name){ toast("Enter a name"); return; }
+  const amt=parseFloat(String($("#billAmt").value).replace(/[^0-9.]/g,""));
+  const autopay=$("#billAuto").classList.contains("on");
+  const payDay=Math.max(1,Math.min(31,parseInt($("#billPayDay").value)||1));
+  const dueRaw=parseInt($("#billDueDay").value); const dueDay=isNaN(dueRaw)?null:Math.max(1,Math.min(31,dueRaw));
+  const color=($("#billColors").querySelector(".cc.sel")||{}).dataset?.color||BILL_COLORS[0];
+  const glyph="🧾";
+  if(billId){ const b=billById(billId); Object.assign(b,{name,amount:isNaN(amt)?0:amt,autopay,payDay,dueDay,color}); }
+  else { S.bills.push({id:"b"+Date.now(),name,glyph,color,amount:isNaN(amt)?0:amt,autopay,payDay,dueDay}); }
+  $("#billScrim").classList.remove("on"); save(); render(); toast(billId?"Bill updated":"Bill added");
+};
+
+// log electric → advance cycle
+$("#btnLog").addEventListener("click",()=>{
+  const T=totals();
+  if(T.electricPending)return;
+  const pStart=elecPeriodStart(), pEnd=S.electric.nextDate;
+  const breakdown=T.list.map(u=>({name:u.name,glyph:u.glyph,amount:Number(u.amount)||0}));
+  S.history.push({id:Date.now(),date:iso(today()),electric:Number(S.electric.amount)||0,breakdown,total:T.total,charge:T.charge,
+    periodStart:pStart,periodEnd:pEnd,paid:false,paidAmount:0,paidDate:null});
+  const d=parseISO(pEnd); d.setDate(d.getDate()+(S.electric.cycleDays||30));
+  S.electric.periodStart=pEnd;
+  S.electric.nextDate=iso(d);
+  S.electric.amount=null;
+  save(); render();
+  toast(`Logged ${money(T.charge)} · ${S.who||"roommate"} owes ${money(T.charge)}`);
+});
+
+// history: tap row → payment sheet, tap ✕ → delete
+$("#history").addEventListener("click",e=>{
+  const del=e.target.closest("[data-del]");
+  if(del){ e.stopPropagation(); const id=Number(del.dataset.del);
+    S.history=S.history.filter(x=>x.id!==id); save(); render(); return; }
+  const row=e.target.closest("[data-pay]");
+  if(row) openPay(Number(row.dataset.pay));
+});
+
+// ---- payment sheet ----
+let payId=null;
+function openPay(id){
+  const en=S.history.find(x=>x.id===id); if(!en)return;
+  payId=id;
+  const ch=entryCharge(en), out=outstanding(en), who=S.who||"roommate";
+  $("#payTitle").textContent=parseISO(en.date).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  $("#payHint").textContent = out>0.005 ? `${who} owes ${money(out)} of ${money(ch)}.` : `Paid in full — ${money(ch)}.`;
+  $("#payFullAmt").textContent = out>0.005?money(out):"✓";
+  $("#payScrim").classList.add("on");
+}
+function closePay(){ $("#payScrim").classList.remove("on"); payId=null; }
+$("#payClose").onclick=closePay;
+$("#payScrim").addEventListener("click",e=>{if(e.target===$("#payScrim"))closePay();});
+$("#payFull").onclick=()=>{ const en=S.history.find(x=>x.id===payId); if(!en)return;
+  en.paidAmount=entryCharge(en); en.paid=true; en.paidDate=iso(today()); save(); render(); closePay(); toast("Marked paid"); };
+$("#payUnmark").onclick=()=>{ const en=S.history.find(x=>x.id===payId); if(!en)return;
+  en.paidAmount=0; en.paid=false; en.paidDate=null; save(); render(); closePay(); toast("Marked unpaid"); };
+$("#payPartial").onclick=()=>{ const en=S.history.find(x=>x.id===payId); if(!en)return; const id=payId; closePay();
+  openEditor({title:"Partial payment",hint:`Total paid so far toward ${money(entryCharge(en))}.`,type:"number",
+    value:entryPaid(en)||"",onSave:v=>{ const en2=S.history.find(x=>x.id===id); if(!en2)return;
+      const p=parseFloat(String(v).replace(/[^0-9.]/g,"")); en2.paidAmount=isNaN(p)?0:p; en2.paid=outstanding(en2)<=0.005; en2.paidDate=iso(today()); }});
+};
+
+// ---- billing-period field sync (dates <-> days) ----
+function pv(el){ return el.value?parseISO(el.value):null; }
+function wirePeriod(startEl,endEl,daysEl){
+  let anchor="start";
+  function syncDays(){ const s=pv(startEl),e=pv(endEl); if(s&&e) daysEl.value=Math.max(0,daysBetween(s,e)); }
+  startEl.addEventListener("change",()=>{ if(startEl.value) anchor="start"; syncDays(); });
+  endEl.addEventListener("change",()=>{ if(endEl.value) anchor="end"; syncDays(); });
+  daysEl.addEventListener("input",()=>{ const d=parseInt(daysEl.value); if(isNaN(d))return;
+    const s=pv(startEl),e=pv(endEl);
+    if(anchor==="end"&&e) startEl.value=iso(addDays(e,-d));
+    else if(s) endEl.value=iso(addDays(s,d));
+    else if(e) startEl.value=iso(addDays(e,-d));
+  });
+  return { reset(a){ anchor=a||"start"; } };
+}
+function resolvePeriod(sv,ev,dv){ let s=sv||null,e=ev||null; const d=parseInt(dv);
+  if(s&&!e&&!isNaN(d)) e=iso(addDays(parseISO(s),d));
+  else if(e&&!s&&!isNaN(d)) s=iso(addDays(parseISO(e),-d));
+  return {start:s,end:e};
+}
+const perCtl=wirePeriod($("#perStart"),$("#perEnd"),$("#perDays"));
+const pastCtl=wirePeriod($("#pastStart"),$("#pastEnd"),$("#pastDays"));
+
+// ---- add past electric bill ----
+function openPast(){ $("#pastAmt").value=""; $("#pastStart").value=""; $("#pastEnd").value=""; $("#pastDays").value=""; pastCtl.reset("start"); $("#pastScrim").classList.add("on"); }
+$("#addPastBtn").onclick=openPast;
+$("#addPastBtn2").onclick=openPast;
+$("#pastCancel").onclick=()=>$("#pastScrim").classList.remove("on");
+$("#pastScrim").addEventListener("click",e=>{if(e.target===$("#pastScrim"))$("#pastScrim").classList.remove("on");});
+$("#pastSave").onclick=()=>{
+  const amt=parseFloat(String($("#pastAmt").value).replace(/[^0-9.]/g,""));
+  const {start,end}=resolvePeriod($("#pastStart").value,$("#pastEnd").value,$("#pastDays").value);
+  if(isNaN(amt)){ toast("Enter an amount"); return; }
+  if(!start||!end){ toast("Enter the period (two of From / To / Days)"); return; }
+  if(parseISO(end)<parseISO(start)){ toast("End date is before start"); return; }
+  // build list as if electric = amt, other bills at their current amounts
+  const list=allUtils().map(u=>u.id==="electric"?{...u,amount:amt}:u);
+  const total=list.reduce((s,u)=>s+(Number(u.amount)||0),0);
+  const ch=chargeForList(list);
+  const breakdown=list.map(u=>({name:u.name,glyph:u.glyph,amount:Number(u.amount)||0}));
+  S.history.push({id:Date.now(),date:end,electric:amt,breakdown,total,charge:ch,
+    periodStart:start,periodEnd:end,paid:true,paidAmount:ch,paidDate:end});
+  $("#pastScrim").classList.remove("on"); save(); render(); toast("Past bill added");
+};
+
+// ---- edit current billing period ----
+function openPeriod(){ $("#perStart").value=elecPeriodStart(); $("#perEnd").value=S.electric.nextDate;
+  $("#perDays").value=Math.max(0,daysBetween(parseISO(elecPeriodStart()),parseISO(S.electric.nextDate))); perCtl.reset("start"); $("#periodScrim").classList.add("on"); }
+$("#perCancel").onclick=()=>$("#periodScrim").classList.remove("on");
+$("#periodScrim").addEventListener("click",e=>{if(e.target===$("#periodScrim"))$("#periodScrim").classList.remove("on");});
+$("#perSave").onclick=()=>{
+  const {start,end}=resolvePeriod($("#perStart").value,$("#perEnd").value,$("#perDays").value);
+  if(!start||!end){ toast("Enter two of From / To / Days"); return; }
+  if(parseISO(end)<parseISO(start)){ toast("End date is before start"); return; }
+  S.electric.periodStart=start; S.electric.nextDate=end;
+  $("#periodScrim").classList.remove("on"); save(); render(); toast("Billing period updated");
+};
+
+// ---- iCloud backup (save a file to iCloud Drive via the share sheet) ----
+function backupBlob(){
+  S.meta=S.meta||{};
+  return new File([JSON.stringify(S,null,2)],"Utilities-backup.json",{type:"application/json"});
+}
+async function doBackup(){
+  const file=backupBlob();
+  let done=false;
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:"Utilities-backup.json"});
+      done=true; // user completed the share sheet (Save to Files → iCloud Drive)
+    }
+  }catch(e){ if(e && e.name==="AbortError") return; /* user cancelled */ }
+  if(!done){ // fallback: direct download (then Save to Files manually)
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(file); a.download="Utilities-backup.json"; a.click();
+  }
+  S.meta.lastBackup=Date.now(); S.meta.backupHash=dataHash(S);
+  save(); updateBackupStatus();
+  toast("Backed up · keep the file in iCloud Drive");
+}
+function openBackup(){
+  if(!S.meta || !S.meta.onboarded){ $("#obScrim").classList.add("on"); }
+  else { doBackup(); }
+}
+$("#bkstrip").onclick=openBackup;
+$("#obGo").onclick=()=>{ S.meta=S.meta||{}; S.meta.onboarded=true; save(); $("#obScrim").classList.remove("on"); doBackup(); };
+$("#obScrim").addEventListener("click",e=>{if(e.target===$("#obScrim"))$("#obScrim").classList.remove("on");});
+
+// ---- restore (merge, so an older file never wipes newer entries) ----
+$("#setRestore").onclick=()=>$("#fileInput").click();
+$("#fileInput").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{
+    try{
+      const inc=JSON.parse(rd.result);
+      const byId={};
+      (S.history||[]).concat(inc.history||[]).forEach(h=>{ if(h&&h.id!=null) byId[h.id]=h; });
+      const merged=Object.assign(defaultState(),inc,S,{
+        history:Object.values(byId).sort((a,b)=>parseISO(a.date)-parseISO(b.date))
+      });
+      // prefer incoming settings if this device looks empty
+      if(!(S.history||[]).length){ merged.who=inc.who||merged.who; merged.electric=inc.electric||merged.electric;
+        merged.internet=inc.internet||merged.internet; merged.insurance=inc.insurance||merged.insurance; merged.split=inc.split||merged.split; }
+      merged.meta=Object.assign({},S.meta,inc.meta);
+      S=migrate(merged); save(); render(); updateBackupStatus();
+      toast("Restored · "+(S.history.length)+" cycles merged");
+    }catch(err){ toast("Couldn't read that file"); }
+  };
+  rd.readAsText(f); e.target.value="";
+};
+
+$("#setReset").onclick=()=>{
+  if(confirm("Reset everything to defaults? Local history will be cleared (your iCloud backup file is untouched).")){
+    S=defaultState(); applyTheme(); save(); render(); toast("Reset");
+  }
+};
+
+// ---- settings sheet ----
+function openSettings(){ $("#setWhoVal").textContent=(S.who||"roommate")+" ›"; syncThemeUI(); syncSplitUI(); $("#setScrim").classList.add("on"); }
+function closeSettings(){ $("#setScrim").classList.remove("on"); }
+$("#btnGear").onclick=openSettings;
+$("#setDone").onclick=closeSettings;
+$("#setScrim").addEventListener("click",e=>{if(e.target===$("#setScrim"))closeSettings();});
+$("#setBackup").onclick=()=>{ closeSettings(); openBackup(); };
+$("#setWho").onclick=()=>{
+  openEditor({title:"Who you charge",hint:"Name shown on the split.",type:"text",value:S.who,
+    onSave:v=>{S.who=(v||"").trim()||"roommate";}});
+};
+
+// ---- theme (auto / light / dark) ----
+function resolvedTheme(){
+  const t=(S.meta&&S.meta.theme)||"auto";
+  if(t==="auto") return matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
+  return t;
+}
+function applyTheme(){
+  const r=resolvedTheme();
+  document.documentElement.dataset.theme=r;
+  const tc=$("#tc"); if(tc) tc.content = r==="dark"?"#07090E":"#EAEEF5";
+  $("#btnTheme").textContent = r==="dark"?"☾":"☀";
+  syncThemeUI();
+}
+function syncThemeUI(){
+  const t=(S.meta&&S.meta.theme)||"auto";
+  const btns=[...document.querySelectorAll("#themeSeg [data-theme-val]")];
+  let idx=0;
+  btns.forEach((b,i)=>{ const on=b.dataset.themeVal===t; b.classList.toggle("sel",on); if(on)idx=i; });
+  const thumb=$("#themeThumb");
+  thumb.style.width="calc((100% - 6px)/3)";
+  thumb.style.transform=`translateX(${idx*100}%)`;
+}
+document.querySelectorAll("#themeSeg [data-theme-val]").forEach(b=>{
+  b.onclick=()=>{ S.meta=S.meta||{}; S.meta.theme=b.dataset.themeVal; save(); applyTheme(); };
+});
+$("#btnTheme").onclick=()=>{ S.meta=S.meta||{}; S.meta.theme = resolvedTheme()==="dark"?"light":"dark"; save(); applyTheme(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",()=>{ if(((S.meta&&S.meta.theme)||"auto")==="auto") applyTheme(); });
+
+// ---- backup freshness indicator ----
+function updateBackupStatus(){
+  const dot=$("#bkdot"), txt=$("#bktext"), cta=$("#bkcta");
+  const m=S.meta||{};
+  const changed = m.backupHash!==dataHash(S);
+  dot.className="bkdot"; cta.classList.remove("hide"); cta.textContent="Back up";
+  if(!m.lastBackup){
+    dot.classList.add("bad"); txt.innerHTML="<b>Not backed up yet</b> — save to iCloud"; cta.textContent="Set up";
+    return;
+  }
+  const days=daysBetween(new Date(m.lastBackup),Date.now());
+  const ago = days<=0?"today":(days===1?"yesterday":days+" days ago");
+  if(changed){ dot.classList.add("warn"); txt.innerHTML="<b>Changes not backed up</b> · last "+ago; }
+  else if(days>=7){ dot.classList.add("bad"); txt.innerHTML="<b>Backup is "+days+" days old</b> · refresh it"; }
+  else{ dot.classList.add("ok"); txt.innerHTML="Backed up "+ago; cta.classList.add("hide"); }
+}
+
+// toast
+let toastT;
+function toast(msg){const el=$("#toast");el.textContent=msg;el.classList.add("on");
+  clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove("on"),2200);}
+
+// install hint (only in Safari, not standalone)
+if(!(window.navigator.standalone)){ $("#install").style.display="block"; }
+$("#installX").onclick=()=>$("#install").style.display="none";
+
+// ---- split (their share) ----
+function syncSplitUI(){
+  const sp=splitCfg();
+  const btns=[...document.querySelectorAll("#splitSeg [data-split-mode]")];
+  let idx=0;
+  btns.forEach((b,i)=>{ const on=b.dataset.splitMode===sp.mode; b.classList.toggle("sel",on); if(on)idx=i; });
+  const thumb=$("#splitThumb"); thumb.style.width="calc((100% - 6px)/2)"; thumb.style.transform=`translateX(${idx*100}%)`;
+  $("#splitFlat").style.display = sp.mode==="perUtility"?"none":"";
+  $("#splitPer").style.display  = sp.mode==="perUtility"?"":"none";
+  $("#flatPct").textContent = sp.flat+"%";
+  $("#splitPer").innerHTML=allUtils().map(u=>
+    `<div class="splitrow" data-split-k="${u.id}">${u.name} <span class="pct">${perPct(u.id)}%</span></div>`).join("");
+}
+document.querySelectorAll("#splitSeg [data-split-mode]").forEach(b=>{
+  b.onclick=()=>{ S.split=splitCfg(); S.split.mode=b.dataset.splitMode; save(); syncSplitUI(); render(); };
+});
+function editFlat(){
+  openEditor({title:"Their share %",hint:"0–100. The rest is yours.",type:"number",value:splitCfg().flat,
+    onSave:v=>{ let p=parseFloat(String(v).replace(/[^0-9.]/g,"")); if(isNaN(p))return; p=Math.max(0,Math.min(100,p));
+      S.split=splitCfg(); S.split.flat=p; syncSplitUI(); render(); }});
+}
+function editPerPct(id,label){
+  openEditor({title:label+" — their share %",hint:"0–100. The rest is yours.",type:"number",value:perPct(id),
+    onSave:v=>{ let p=parseFloat(String(v).replace(/[^0-9.]/g,"")); if(isNaN(p))return; p=Math.max(0,Math.min(100,p));
+      S.split=splitCfg(); S.split.per=S.split.per||{}; S.split.per[id]=p; syncSplitUI(); render(); }});
+}
+$("#splitFlatRow").onclick=editFlat;
+$("#splitPer").addEventListener("click",e=>{ const row=e.target.closest("[data-split-k]"); if(!row)return;
+  const id=row.dataset.splitK; const u=allUtils().find(x=>x.id===id)||{name:id}; editPerPct(id,u.name); });
+
+// ---- Add due dates to Calendar (offline alerts via .ics) ----
+function pad(n){return String(n).padStart(2,"0");}
+function icsDate(d){return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;}
+function buildICS(){
+  const dtstamp=new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z";
+  const e=parseISO(S.electric.nextDate);
+  function vevent(uid,start,rule,summary,trigDays){
+    return ["BEGIN:VEVENT",`UID:${uid}-${Date.now()}-${Math.random().toString(36).slice(2)}@split.local`,`DTSTAMP:${dtstamp}`,
+      `DTSTART;VALUE=DATE:${icsDate(start)}`,`RRULE:${rule}`,`SUMMARY:${summary}`,"TRANSP:TRANSPARENT",
+      "BEGIN:VALARM",`TRIGGER:-P${trigDays}D`,"ACTION:DISPLAY","DESCRIPTION:Utilities reminder","END:VALARM",
+      "END:VEVENT"].join("\r\n");
+  }
+  const elecStart=e<today()?today():e;
+  const evs=[ vevent("elec",elecStart,`FREQ=DAILY;INTERVAL=${S.electric.cycleDays||30}`,`${S.electric.glyph||"⚡"} ${S.electric.name||"Electric"} bill — enter amount in Utilities`,2) ];
+  (S.bills||[]).forEach(b=>{ evs.push(vevent(b.id,nextDayOfMonth(b.payDay),"FREQ=MONTHLY;BYMONTHDAY="+b.payDay,
+    `${b.glyph} ${b.name} ${b.autopay!==false?"autopays":"due"} ${money(b.amount)}`,1)); });
+  const body=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Utilities//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH",
+    ...evs,"END:VCALENDAR"].join("\r\n");
+  return new File([body],"Utilities-reminders.ics",{type:"text/calendar"});
+}
+async function addToCalendar(){
+  const file=buildICS();
+  try{
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file],title:"Utilities reminders"}); toast("Opening Calendar…"); return; }
+  }catch(err){ if(err&&err.name==="AbortError") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download="Utilities-reminders.ics"; a.click();
+  toast("Downloaded · open it to add to Calendar");
+}
+$("#calBtn").onclick=addToCalendar;
+$("#setCal").onclick=()=>{ closeSettings(); addToCalendar(); };
+
+// ---- Year / all-time summary ----
+let sumScope="year";
+function summaryData(scope){
+  const yr=today().getFullYear();
+  const hist=S.history.filter(e=>{ if(scope!=="year")return true; const d=parseISO(e.periodEnd||e.date); return d.getFullYear()===yr; });
+  const adj=(S.adjustments||[]).filter(a=>{ if(scope!=="year")return true; return parseISO(a.date).getFullYear()===yr; });
+  let charged=0,collected=0; const perUtil={};
+  hist.forEach(e=>{ charged+=entryCharge(e); collected+=entryPaid(e);
+    entryBreakdown(e).forEach(x=>{ perUtil[x.name]=(perUtil[x.name]||0)+(Number(x.amount)||0); }); });
+  const adjTotal=adj.reduce((s,a)=>s+(Number(a.amount)||0),0);
+  const outstanding=hist.reduce((s,e)=>s+outstanding_(e),0)+adjTotal;
+  const eVals=hist.map(e=>Number(e.electric)||0).filter(v=>v>0);
+  const eAvg=eVals.length?eVals.reduce((a,b)=>a+b,0)/eVals.length:0;
+  return {count:hist.length,charged,collected,outstanding,perUtil,adjTotal,eAvg,
+    avgMonthly: hist.length?charged/hist.length:0};
+}
+function outstanding_(e){ return outstanding(e); }
+function renderSummary(){
+  const d=summaryData(sumScope);
+  if(!d.count && Math.abs(d.adjTotal)<0.005){ $("#sumBody").innerHTML=`<div class="sum-empty">Nothing logged ${sumScope==="year"?"this year":"yet"}.</div>`; return; }
+  const rows=[];
+  rows.push(["Cycles logged", d.count]);
+  rows.push(["Avg charge / cycle", money(d.avgMonthly)]);
+  if(d.eAvg) rows.push([`Avg ${(S.electric.name||"electric").toLowerCase()} bill`, money(d.eAvg)]);
+  Object.entries(d.perUtil).forEach(([k,v])=>rows.push([`Total billed · ${k}`, money(v)]));
+  if(Math.abs(d.adjTotal)>0.005) rows.push(["Adjustments", (d.adjTotal<0?"−":"+")+money(Math.abs(d.adjTotal))]);
+  $("#sumBody").innerHTML=`
+    <div class="sum-big">
+      <div class="card"><div class="k">You charged</div><div class="v tnum">${money(d.charged)}</div></div>
+      <div class="card"><div class="k">Collected</div><div class="v tnum">${money(d.collected)}</div></div>
+      <div class="card"><div class="k">Outstanding</div><div class="v tnum">${money(d.outstanding)}</div></div>
+    </div>
+    ${rows.map(r=>`<div class="sum-row"><span class="k">${r[0]}</span><span class="v tnum">${r[1]}</span></div>`).join("")}`;
+}
+function setSumScope(s){ sumScope=s; const btns=[...document.querySelectorAll("#sumSeg [data-sum]")]; let idx=0;
+  btns.forEach((b,i)=>{ const on=b.dataset.sum===s; b.classList.toggle("sel",on); if(on)idx=i; });
+  const th=$("#sumThumb"); th.style.width="calc((100% - 6px)/2)"; th.style.transform=`translateX(${idx*100}%)`; renderSummary(); }
+document.querySelectorAll("#sumSeg [data-sum]").forEach(b=>b.onclick=()=>setSumScope(b.dataset.sum));
+$("#summaryBtn").onclick=()=>{ setSumScope("year"); $("#sumScrim").classList.add("on"); };
+$("#sumDone").onclick=()=>$("#sumScrim").classList.remove("on");
+$("#sumScrim").addEventListener("click",e=>{if(e.target===$("#sumScrim"))$("#sumScrim").classList.remove("on");});
+
+// register service worker for offline install (only when hosted over http/https)
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+
+applyTheme();
+render();
+reconcileFromIDB();
+</script>
+</body>
+</html>
