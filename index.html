@@ -500,6 +500,9 @@
     </div>
     <div id="splitPer" style="display:none"></div>
 
+    <div class="set-label">Default costs — monthly bills</div>
+    <div id="setCosts"></div>
+
     <div class="set-label">Reminders</div>
     <div class="set-row" id="setCal">Add due dates to Calendar <span class="chev">🗓️</span></div>
 
@@ -584,7 +587,7 @@ function defaultState(){
     who:"roommate",
     electric:{ amount:null, name:"Electric", glyph:"⚡", periodStart:"2026-06-09", nextDate:"2026-07-09", cycleDays:30 }, // variable anchor
     bills:[
-      { id:"internet",  name:"Internet",  glyph:"🌐", color:"var(--net)", amount:90,   autopay:true, payDay:12, dueDay:13 },
+      { id:"internet",  name:"Internet",  glyph:"🌐", color:"var(--net)", amount:100,  autopay:true, payDay:12, dueDay:13 },
       { id:"insurance", name:"Insurance", glyph:"🛡️", color:"var(--ins)", amount:15.95, autopay:true, payDay:24, dueDay:null }
     ],
     adjustments:[],  // {id, date, amount (+ = extra charge, - = credit), note}
@@ -608,6 +611,13 @@ function migrate(st){
   if(!st.adjustments) st.adjustments=[];
   if(!st.split) st.split={mode:"flat",flat:50,per:{}};
   if(!st.split.per){ st.split.per={}; ["electric","internet","insurance"].forEach(k=>{ if(typeof st.split[k]==="number") st.split.per[k]=st.split[k]; }); }
+  // one-time: move an untouched Internet bill off the old $90 default onto the new $100 one
+  st.meta=st.meta||{};
+  if(!st.meta.netDefault100){
+    const net=(st.bills||[]).find(b=>b.id==="internet");
+    if(net && Number(net.amount)===90) net.amount=100;
+    st.meta.netDefault100=true;
+  }
   return st;
 }
 
@@ -1191,7 +1201,7 @@ $("#setReset").onclick=()=>{
 };
 
 // ---- settings sheet ----
-function openSettings(){ $("#setWhoVal").textContent=(S.who||"roommate")+" ›"; syncThemeUI(); syncSplitUI(); $("#setScrim").classList.add("on"); }
+function openSettings(){ $("#setWhoVal").textContent=(S.who||"roommate")+" ›"; syncThemeUI(); syncSplitUI(); syncCostsUI(); $("#setScrim").classList.add("on"); }
 function closeSettings(){ $("#setScrim").classList.remove("on"); }
 $("#btnGear").onclick=openSettings;
 $("#setDone").onclick=closeSettings;
@@ -1201,6 +1211,21 @@ $("#setWho").onclick=()=>{
   openEditor({title:"Who you charge",hint:"Name shown on the split.",type:"text",value:S.who,
     onSave:v=>{S.who=(v||"").trim()||"roommate";}});
 };
+
+// ---- default costs (recurring monthly bill amounts) ----
+function syncCostsUI(){
+  const bills=S.bills||[];
+  $("#setCosts").innerHTML = bills.length
+    ? bills.map(b=>`<div class="splitrow" data-cost-k="${b.id}">${b.glyph} ${b.name} <span class="pct tnum">${money(b.amount)}</span></div>`).join("")
+    : `<div class="splitrow" style="color:var(--text2);font-weight:500">No monthly bills yet — add one from the list.</div>`;
+}
+$("#setCosts").addEventListener("click",e=>{
+  const row=e.target.closest("[data-cost-k]"); if(!row)return;
+  const b=billById(row.dataset.costK); if(!b)return;
+  openEditor({title:b.name+" default cost",hint:"The amount charged every month for this bill.",type:"number",
+    value:b.amount!=null?b.amount:"",
+    onSave:v=>{ const n=parseFloat(String(v).replace(/[^0-9.]/g,"")); if(isNaN(n)||n<0)return; b.amount=n; syncCostsUI(); }});
+});
 
 // ---- theme (auto / light / dark) ----
 function resolvedTheme(){
