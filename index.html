@@ -519,6 +519,7 @@
 
     <div class="set-label">About</div>
     <div class="set-row" id="setVer">Version <span class="chev" id="setVerVal">—</span></div>
+    <div class="set-row" id="setUpdate">Check for updates <span class="chev">↻</span></div>
     <button class="one" id="setDone" style="margin-top:16px;background:var(--fill);color:var(--text);box-shadow:none;">Done</button>
   </div>
 </div>
@@ -581,7 +582,7 @@
 <script>
 "use strict";
 const KEY="split_utils_v1";
-const APP_VERSION="1.1.1";      // bump on every release — keep sw.js VERSION in sync
+const APP_VERSION="1.1.2";      // bump on every release — keep sw.js VERSION in sync
 const APP_BUILD="2026-08-22";
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n)||0);
@@ -1409,8 +1410,35 @@ $("#sumScrim").addEventListener("click",e=>{if(e.target===$("#sumScrim"))$("#sum
 
 // register service worker for offline install (only when hosted over http/https)
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  navigator.serviceWorker.register("sw.js").catch(()=>{});
+  // if a worker is already in charge, a later handover means a NEW build took over
+  const hadController=!!navigator.serviceWorker.controller;
+  let reloading=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(hadController && !reloading){ reloading=true; location.reload(); }
+  });
+  navigator.serviceWorker.register("sw.js").then(reg=>{
+    reg.update().catch(()=>{});                                // check on every launch
+    setInterval(()=>reg.update().catch(()=>{}),60*60*1000);     // and hourly while open
+  }).catch(()=>{});
+  // a home-screen app is usually resumed, not relaunched — check when it comes forward
+  document.addEventListener("visibilitychange",()=>{
+    if(document.hidden)return;
+    navigator.serviceWorker.getRegistration().then(r=>{ if(r) r.update().catch(()=>{}); }).catch(()=>{});
+  });
 }
+
+// manual escape hatch: drop the offline caches and reload from the network.
+// only CacheStorage is cleared — bills, history and adjustments are untouched.
+async function forceUpdate(){
+  toast("Checking for updates…");
+  try{
+    const reg=await navigator.serviceWorker?.getRegistration();
+    if(reg) await reg.update().catch(()=>{});
+    if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); }
+  }catch(e){}
+  setTimeout(()=>location.reload(),500);
+}
+$("#setUpdate").onclick=forceUpdate;
 
 // ---- page-behind scroll lock ----
 // every sheet opens/closes by toggling .on on its scrim, so watch that rather than
