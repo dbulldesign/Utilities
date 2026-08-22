@@ -399,7 +399,7 @@
   <b>Make it an app:</b> tap the Share button in Safari, then <b>Add to Home Screen</b>. It runs fully offline from there.
 </div>
 
-<div class="foot">All data stays on this device · offline</div>
+<div class="foot">All data stays on this device · offline · <span id="footVer">—</span></div>
 
 <!-- Editor sheet -->
 <div class="scrim" id="scrim">
@@ -511,6 +511,9 @@
     <div class="set-row" id="setRestore">Restore from iCloud <span class="chev">☁︎↓</span></div>
     <div class="set-row" id="setWho">Who you charge <span class="chev" id="setWhoVal">roommate ›</span></div>
     <div class="set-row danger" id="setReset">Reset everything <span class="chev">⟲</span></div>
+
+    <div class="set-label">About</div>
+    <div class="set-row" id="setVer">Version <span class="chev" id="setVerVal">—</span></div>
     <button class="one" id="setDone" style="margin-top:16px;background:var(--fill);color:var(--text);box-shadow:none;">Done</button>
   </div>
 </div>
@@ -573,6 +576,8 @@
 <script>
 "use strict";
 const KEY="split_utils_v1";
+const APP_VERSION="1.1.0";      // bump on every release — keep sw.js VERSION in sync
+const APP_BUILD="2026-08-22";
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n)||0);
 const mdShort=d=>d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
@@ -691,7 +696,7 @@ async function reconcileFromIDB(){
     const local=localStorage.getItem(KEY);
     // adopt IDB copy only if localStorage is missing/empty but IDB has real history
     if(!local && backup && (backup.history?.length || backup.meta?.lastBackup)){
-      S=migrate(Object.assign(defaultState(),backup)); save(); render();
+      S=migrate(Object.assign(defaultState(),backup)); save(); applyVersion(); render();
       toast("Recovered your data from device backup");
     }
   }catch(e){}
@@ -1187,7 +1192,7 @@ $("#fileInput").onchange=e=>{
       if(!(S.history||[]).length){ merged.who=inc.who||merged.who; merged.electric=inc.electric||merged.electric;
         merged.internet=inc.internet||merged.internet; merged.insurance=inc.insurance||merged.insurance; merged.split=inc.split||merged.split; }
       merged.meta=Object.assign({},S.meta,inc.meta);
-      S=migrate(merged); save(); render(); updateBackupStatus();
+      S=migrate(merged); save(); applyVersion(); render(); updateBackupStatus();
       toast("Restored · "+(S.history.length)+" cycles merged");
     }catch(err){ toast("Couldn't read that file"); }
   };
@@ -1196,7 +1201,7 @@ $("#fileInput").onchange=e=>{
 
 $("#setReset").onclick=()=>{
   if(confirm("Reset everything to defaults? Local history will be cleared (your iCloud backup file is untouched).")){
-    S=defaultState(); applyTheme(); save(); render(); toast("Reset");
+    S=defaultState(); applyTheme(); save(); applyVersion(); render(); toast("Reset");
   }
 };
 
@@ -1226,6 +1231,19 @@ $("#setCosts").addEventListener("click",e=>{
     value:b.amount!=null?b.amount:"",
     onSave:v=>{ const n=parseFloat(String(v).replace(/[^0-9.]/g,"")); if(isNaN(n)||n<0)return; b.amount=n; syncCostsUI(); }});
 });
+
+// ---- version stamp ----
+function buildLabel(){
+  return APP_VERSION+" · built "+parseISO(APP_BUILD).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+}
+function applyVersion(){
+  $("#footVer").textContent="v"+APP_VERSION;
+  $("#setVerVal").textContent=APP_VERSION;
+  // stamp the running version into state so backup files say which build wrote them
+  S.meta=S.meta||{};
+  if(S.meta.version!==APP_VERSION){ S.meta.version=APP_VERSION; save(); }
+}
+$("#setVer").onclick=()=>toast("Utilities "+buildLabel());
 
 // ---- theme (auto / light / dark) ----
 function resolvedTheme(){
@@ -1390,6 +1408,7 @@ if("serviceWorker" in navigator && location.protocol.startsWith("http")){
 }
 
 applyTheme();
+applyVersion();
 render();
 reconcileFromIDB();
 </script>

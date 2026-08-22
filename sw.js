@@ -1,5 +1,6 @@
 /* Split — offline service worker */
-const CACHE = "utilities-v1";
+const VERSION = "1.1.0";        // keep in sync with APP_VERSION in index.html
+const CACHE = "utilities-v" + VERSION;
 const CORE = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icon-180.png", "./icon-192.png", "./icon-512.png"
