@@ -171,12 +171,17 @@
 
   /* Modals / sheets */
   .scrim{position:fixed;inset:0;background:rgba(4,7,12,.5);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-    display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0 10px calc(10px + env(safe-area-inset-bottom));}
+    display:none;align-items:flex-end;justify-content:center;z-index:50;
+    padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));}
   .scrim.on{display:flex;}
   .sheet{width:100%;max-width:500px;border-radius:26px;padding:20px;
     background:var(--glass2); -webkit-backdrop-filter:blur(30px) saturate(180%); backdrop-filter:blur(30px) saturate(180%);
     border:1px solid var(--stroke); box-shadow:0 -8px 40px rgba(0,0,0,.35), inset 0 1px 0 var(--strokeTop);
-    animation:pop .26s cubic-bezier(.2,.9,.2,1);}
+    animation:pop .26s cubic-bezier(.2,.9,.2,1);
+    /* a tall sheet (Settings, Summary) scrolls itself instead of overflowing off-screen */
+    max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;}
+  /* while a sheet is open the page behind it stays put */
+  html.modal-open,body.modal-open{overflow:hidden;}
   @keyframes pop{from{transform:translateY(16px);opacity:.5;}to{transform:none;opacity:1;}}
   .sheet h3{margin:0 0 4px;font-size:18px;font-weight:800;letter-spacing:-0.02em;}
   .sheet p{margin:0 0 15px;font-size:13px;color:var(--text2);font-weight:500;line-height:1.5;}
@@ -576,7 +581,7 @@
 <script>
 "use strict";
 const KEY="split_utils_v1";
-const APP_VERSION="1.1.0";      // bump on every release — keep sw.js VERSION in sync
+const APP_VERSION="1.1.1";      // bump on every release — keep sw.js VERSION in sync
 const APP_BUILD="2026-08-22";
 const $=s=>document.querySelector(s);
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n)||0);
@@ -1406,6 +1411,18 @@ $("#sumScrim").addEventListener("click",e=>{if(e.target===$("#sumScrim"))$("#sum
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
+
+// ---- page-behind scroll lock ----
+// every sheet opens/closes by toggling .on on its scrim, so watch that rather than
+// touching each of the ~dozen call sites
+function syncScrollLock(){
+  const open = document.querySelector(".scrim.on") != null;
+  document.documentElement.classList.toggle("modal-open",open);
+  document.body.classList.toggle("modal-open",open);
+}
+(()=>{ const obs=new MutationObserver(syncScrollLock);
+  document.querySelectorAll(".scrim").forEach(sc=>obs.observe(sc,{attributes:true,attributeFilter:["class"]}));
+})();
 
 applyTheme();
 applyVersion();
